@@ -11,12 +11,12 @@ public class Note
 
 public static class ChartGenerator
 {
+    public static float step = 0.3f;
     public static int fftSize = 1024;
-    public static int moveLength => fftSize / 2;
+    public static int moveLength = 1024;
     public static int numSubBands = 4;
     public static int historySize = 43;
-    public static float sensitivity = 4.0f;
-    public static float[] pitchRanges = { 40, 50, 60, 70 };
+    public static float sensitivity = 2.5f;
 
     public static List<Note> GetChart(AudioClip audioClip)
     {
@@ -25,7 +25,7 @@ public static class ChartGenerator
 
         List<Note> notes = new List<Note>();
 
-        float[] subBandWidths = GenerateSubBandWidth(numSubBands);
+        float[] subBandWidths = GenerateSubBandWidth(numSubBands, 32);
         float[][] energyHistory = new float[numSubBands][];
         for (int i = 0; i < numSubBands; i++)
         {
@@ -36,11 +36,12 @@ public static class ChartGenerator
         audioClip.GetData(samples, 0);
         float[] window = GenerateHanningWindow(fftSize);
         int historyIndex = 0;
+        float[] lastTime = new float[numSubBands];
 
         using (BurstFFT fft = new BurstFFT(fftSize))
         {
             NativeArray<float> segment = new NativeArray<float>(fftSize, Allocator.TempJob);
-            for (int sampleIndex = 0; sampleIndex < samples.Length; sampleIndex += moveLength * 2)
+            for (int sampleIndex = 0; sampleIndex < samples.Length; sampleIndex += moveLength)
             {
                 // Get Spectrum
                 for (int i = 0; i < fftSize; i++)
@@ -54,24 +55,34 @@ public static class ChartGenerator
                 float[] subBandEnergies = GenerateSubBandEnergy(spectrum, subBandWidths);
                 for (int i = 0; i < numSubBands; i++)
                 {
-                    // Update history buffer
-                    // energyHistory[i][historyIndex] = subBandEnergy[i];
-
-                    // Calculate moving average
-                    float average = 0;
-                    for (int j = 0; j < historySize; j++)
+                    if (sampleIndex / moveLength >= historySize)
                     {
-                        average += energyHistory[i][j];
-                    }
-                    average /= historySize;
-
-                    if (subBandEnergies[i] > sensitivity * average)
-                    {
-                        notes.Add(new Note
+                        float average = 0;
+                        for (int j = 0; j < historySize; j++)
                         {
-                            time = (float)sampleIndex / sampleRate / 2,
-                            track = i,
-                        });
+                            average += energyHistory[i][j];
+                        }
+                        average /= historySize;
+
+                        float variance = 0;
+                        for (int j = 0; j < historySize; j++)
+                        {
+                            variance += Mathf.Pow(energyHistory[i][j] - average, 2);
+                        }
+                        variance /= historySize;
+
+                        float C = 1.5142857f - variance / average / average * 0.25714f;
+                        float V0 = 1e-4f;
+                        float currentTime = (float)(sampleIndex + moveLength / 2) / sampleRate / 2;
+                        if (subBandEnergies[i] > sensitivity * C * average && variance > sensitivity * V0 * average && currentTime - lastTime[i] > step)
+                        {
+                            notes.Add(new Note
+                            {
+                                time = currentTime,
+                                track = i,
+                            });
+                            lastTime[i] = currentTime;
+                        }
                     }
 
                     energyHistory[i][historyIndex] = subBandEnergies[i];
@@ -84,18 +95,6 @@ public static class ChartGenerator
         return notes;
     }
 
-    public static int GetTrackFromPitch(float pitch)
-    {
-        for (int i = 0; i < pitchRanges.Length - 1; i++)
-        {
-            if (pitch >= pitchRanges[i] && pitch < pitchRanges[i + 1])
-            {
-                return i;
-            }
-        }
-        return -1;
-    }
-
     private static float[] GenerateHanningWindow(int size)
     {
         float[] window = new float[size];
@@ -106,62 +105,38 @@ public static class ChartGenerator
         return window;
     }
 
-    private static float[] GenerateSubBandWidth(int num)
+    private static float[] GenerateSubBandWidth(int num, int totalWidth)
     {
         float[] subBandWidths = new float[num];
 
+        int b = 5;
+        int a = (totalWidth - b * num) * 2 / (num * (num + 1));
         for (int i = 0; i < num; i++)
         {
-            subBandWidths[i] = fftSize / num;
+            subBandWidths[i] = a * i + b;
         }
         return subBandWidths;
     }
 
     private static float[] GenerateSubBandEnergy(NativeArray<float> spectrum, float[] subBandWidths)
     {
-        float[] subBandEnergies = new float[subBandWidths.Length];
+        int numBands = subBandWidths.Length;
+        float[] subBandEnergies = new float[numBands];
         int band = 0;
         float bandWidth = 0;
-        for (int i = 0; i < fftSize; i++)
+
+        for (int i = 0; i < fftSize / 2; i++)
         {
             if (i >= bandWidth + subBandWidths[band])
             {
                 bandWidth += subBandWidths[band];
                 band++;
-                if (band >= subBandWidths.Length)
+                if (band >= numBands)
                     break;
             }
             float magnitude = spectrum[i];
-            subBandEnergies[band] += magnitude * magnitude;
+            subBandEnergies[band] += magnitude * magnitude / subBandWidths[band];
         }
         return subBandEnergies;
-    }
-
-    public static float DetectPitch(NativeArray<float> spectrum, float sampleRate)
-    {
-        float maxMagnitude = 0;
-        int maxBin = 0;
-
-        // 找到频谱中能量最大的频率 bin
-        for (int i = 0; i < spectrum.Length / 2; i++) // 只取正频率部分
-        {
-            float magnitude = spectrum[i];
-            if (magnitude > maxMagnitude)
-            {
-                maxMagnitude = magnitude;
-                maxBin = i;
-            }
-        }
-
-        // 频率 = bin索引 × 采样率 / FFT大小
-        float frequency = maxBin * sampleRate / (spectrum.Length * 2);
-        return FrequencyToPitch(frequency); // 频率转音高（MIDI音符编号）
-    }
-
-    // 频率转MIDI音符编号（A4=440Hz对应MIDI 69）
-    private static float FrequencyToPitch(float frequency)
-    {
-        if (frequency <= 0) return -1;
-        return 12 * Mathf.Log10(frequency / 440) + 69;
     }
 }

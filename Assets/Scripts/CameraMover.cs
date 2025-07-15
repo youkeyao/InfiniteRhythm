@@ -4,11 +4,15 @@ using UnityEngine;
 
 public class CameraMover : MonoBehaviour
 {
-    public Vector3 initPosition = new Vector3(6, 6, -60);
-
+    Vector3 m_initPosition;
     bool m_isPlaying = false;
     float m_startTime = 0;
     float m_speed = 10.0f;
+
+    public void Start()
+    {
+        m_initPosition = transform.position;
+    }
 
     public void Play(float speed)
     {
@@ -22,9 +26,7 @@ public class CameraMover : MonoBehaviour
         if (m_isPlaying)
         {
             float currentTime = Time.time - m_startTime;
-
-            Vector3 position = initPosition + new Vector3(0, 0, currentTime * m_speed);
-
+            Vector3 position = m_initPosition + new Vector3(0, 0, currentTime * m_speed);
             transform.position = position;
         }
     }

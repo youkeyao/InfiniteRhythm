@@ -9,20 +9,30 @@ public class LevelManager : MonoBehaviour
     public List<Note> currentChart;
     public float speed = 10.0f;
 
+    public GameObject prefab;
     public NoteManager noteManager;
     public CameraMover cameraMover;
 
-    AudioSource audioSource;
+    AudioSource m_audioSource;
     List<string> m_levels = new List<string>();
     int m_currentLevel = 0;
 
+    GameObject[] gameObjects;
+
     void Start()
     {
-        audioSource = this.AddComponent<AudioSource>();
+        m_audioSource = this.AddComponent<AudioSource>();
         string[] dirs = Directory.GetDirectories(Application.persistentDataPath);
         foreach (string dir in dirs)
         {
             m_levels.Add(dir);
+        }
+
+        gameObjects = new GameObject[1024];
+        for (int i = 0; i < gameObjects.Length; i++)
+        {
+            gameObjects[i] = Instantiate(prefab, new Vector3(i, 0, 0), Quaternion.identity, transform);
+            gameObjects[i].name = "Note " + i;
         }
     }
 
@@ -44,6 +54,21 @@ public class LevelManager : MonoBehaviour
     //     }
     // }
 
+    void Update()
+    {
+        if (m_audioSource.isPlaying)
+        {
+            float[] samples = new float[1024];
+            m_audioSource.GetSpectrumData(samples, 0, FFTWindow.BlackmanHarris);
+
+            for (int i = 0; i < samples.Length; i++)
+            {
+                float note = samples[i];
+                gameObjects[i].transform.localScale = new Vector3(1, note * 200, 1);
+            }
+        }
+    }
+
     public void Play()
     {
         StartCoroutine(LoadLevel());
@@ -63,8 +88,8 @@ public class LevelManager : MonoBehaviour
 
             noteManager.Play(currentChart, speed);
             cameraMover.Play(speed);
-            audioSource.clip = audioClip;
-            audioSource.Play();
+            m_audioSource.clip = audioClip;
+            m_audioSource.Play();
         }
     }
 }
