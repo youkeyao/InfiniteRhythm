@@ -70,18 +70,6 @@ public class NoteManager : MonoBehaviour
         }
     }
 
-    // void SpawnNote(Note note, float currentTime)
-    // {
-    //     Vector3 spawnPos = new Vector3(note.track * 4, 0, note.time * m_speed) + transform.position;
-
-    //     GameObject noteObj = Instantiate(
-    //         notePrefab,
-    //         spawnPos,
-    //         Quaternion.identity,
-    //         transform
-    //     );
-    // }
-
     void OnRenderObject()
     {
         Graphics.DrawMeshInstanced(noteMesh, 0, noteMaterial, m_spawnList.ToArray(), m_spawnList.Count);

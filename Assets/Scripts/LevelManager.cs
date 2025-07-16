@@ -28,7 +28,7 @@ public class LevelManager : MonoBehaviour
             m_levels.Add(dir);
         }
 
-        gameObjects = new GameObject[1024];
+        gameObjects = new GameObject[ChartGenerator.windowSize];
         for (int i = 0; i < gameObjects.Length; i++)
         {
             gameObjects[i] = Instantiate(prefab, new Vector3(i, 0, 0), Quaternion.identity, transform);
@@ -56,17 +56,17 @@ public class LevelManager : MonoBehaviour
 
     void Update()
     {
-        if (m_audioSource.isPlaying)
-        {
-            float[] samples = new float[1024];
-            m_audioSource.GetSpectrumData(samples, 0, FFTWindow.BlackmanHarris);
+        // if (m_audioSource.isPlaying)
+        // {
+        //     float[] samples = new float[ChartGenerator.windowSize];
+        //     m_audioSource.GetSpectrumData(samples, 0, FFTWindow.BlackmanHarris);
 
-            for (int i = 0; i < samples.Length; i++)
-            {
-                float note = samples[i];
-                gameObjects[i].transform.localScale = new Vector3(1, note * 200, 1);
-            }
-        }
+        //     for (int i = 0; i < samples.Length; i++)
+        //     {
+        //         float note = samples[i];
+        //         gameObjects[i].transform.localScale = new Vector3(1, note * 200, 1);
+        //     }
+        // }
     }
 
     public void Play()

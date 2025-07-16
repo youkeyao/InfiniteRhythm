@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using Unity.Collections;
 using UnityEngine;
@@ -11,12 +10,14 @@ public class Note
 
 public static class ChartGenerator
 {
-    public static float step = 0.3f;
-    public static int fftSize = 1024;
-    public static int moveLength = 1024;
+    public static float step = 0.2f;
+    public static int windowSize = 2048;
+    public static int moveLength = 2048;
+    public static int firstBandWidth = 10;
+    public static int allBandWidth = 64;
     public static int numSubBands = 4;
     public static int historySize = 43;
-    public static float sensitivity = 2.5f;
+    public static float sensitivity = 3.0f;
 
     public static List<Note> GetChart(AudioClip audioClip)
     {
@@ -25,7 +26,7 @@ public static class ChartGenerator
 
         List<Note> notes = new List<Note>();
 
-        float[] subBandWidths = GenerateSubBandWidth(numSubBands, 32);
+        float[] subBandWidths = GenerateSubBandWidth(numSubBands, allBandWidth);
         float[][] energyHistory = new float[numSubBands][];
         for (int i = 0; i < numSubBands; i++)
         {
@@ -34,17 +35,17 @@ public static class ChartGenerator
         int sampleRate = audioClip.frequency;
         float[] samples = new float[audioClip.samples * audioClip.channels];
         audioClip.GetData(samples, 0);
-        float[] window = GenerateHanningWindow(fftSize);
+        float[] window = GenerateHanningWindow(windowSize);
         int historyIndex = 0;
         float[] lastTime = new float[numSubBands];
 
-        using (BurstFFT fft = new BurstFFT(fftSize))
+        using (BurstFFT fft = new BurstFFT(windowSize))
         {
-            NativeArray<float> segment = new NativeArray<float>(fftSize, Allocator.TempJob);
+            NativeArray<float> segment = new NativeArray<float>(windowSize, Allocator.TempJob);
             for (int sampleIndex = 0; sampleIndex < samples.Length; sampleIndex += moveLength)
             {
                 // Get Spectrum
-                for (int i = 0; i < fftSize; i++)
+                for (int i = 0; i < windowSize; i++)
                 {
                     if (sampleIndex + i * 2 >= samples.Length)
                         break;
@@ -71,10 +72,10 @@ public static class ChartGenerator
                         }
                         variance /= historySize;
 
-                        float C = 1.5142857f - variance / average / average * 0.25714f;
-                        float V0 = 1e-4f;
-                        float currentTime = (float)(sampleIndex + moveLength / 2) / sampleRate / 2;
-                        if (subBandEnergies[i] > sensitivity * C * average && variance > sensitivity * V0 * average && currentTime - lastTime[i] > step)
+                        float C = 1.5142857f - variance / average / average * 0.0025714f;
+                        float V0 = 0.2f * average * average;
+                        float currentTime = (float)(sampleIndex + windowSize) / sampleRate / 2;
+                        if (subBandEnergies[i] > sensitivity * C * average && variance > sensitivity * V0 && currentTime - lastTime[i] > step)
                         {
                             notes.Add(new Note
                             {
@@ -100,7 +101,7 @@ public static class ChartGenerator
         float[] window = new float[size];
         for (int i = 0; i < size; i++)
         {
-            window[i] = 0.5f * (1 - Mathf.Cos(2 * Mathf.PI * i / (size - 1)));
+            window[i] = 0.54f - 0.46f * Mathf.Cos(2 * Mathf.PI * i / (size - 1));
         }
         return window;
     }
@@ -109,7 +110,7 @@ public static class ChartGenerator
     {
         float[] subBandWidths = new float[num];
 
-        int b = 5;
+        int b = firstBandWidth;
         int a = (totalWidth - b * num) * 2 / (num * (num + 1));
         for (int i = 0; i < num; i++)
         {
@@ -125,7 +126,7 @@ public static class ChartGenerator
         int band = 0;
         float bandWidth = 0;
 
-        for (int i = 0; i < fftSize / 2; i++)
+        for (int i = 0; i < spectrum.Length / 2; i++)
         {
             if (i >= bandWidth + subBandWidths[band])
             {
@@ -134,9 +135,80 @@ public static class ChartGenerator
                 if (band >= numBands)
                     break;
             }
-            float magnitude = spectrum[i];
-            subBandEnergies[band] += magnitude * magnitude / subBandWidths[band];
+            subBandEnergies[band] += spectrum[i] * spectrum[i] / subBandWidths[band];
         }
         return subBandEnergies;
     }
 }
+
+// public static class ChartGenerator
+// {
+//     public static float step = 0.2f;
+//     public static int windowSize = 1024;
+//     public static int moveLength = 2048;
+//     public static int historySize = 43;
+//     public static float sensitivity = 1.0f;
+
+//     public static List<Note> GetChart(AudioClip audioClip)
+//     {
+//         if (audioClip == null)
+//             return null;
+
+//         List<Note> notes = new List<Note>();
+
+//         float[] energyHistory = new float[historySize];
+//         int sampleRate = audioClip.frequency;
+//         float[] samples = new float[audioClip.samples * audioClip.channels];
+//         audioClip.GetData(samples, 0);
+//         int historyIndex = 0;
+//         float lastTime = 0;
+
+//         NativeArray<float> segment = new NativeArray<float>(windowSize, Allocator.TempJob);
+//         for (int sampleIndex = 0; sampleIndex < samples.Length; sampleIndex += moveLength)
+//         {
+//             float energy = 0;
+//             for (int i = 0; i < windowSize; i++)
+//             {
+//                 if (sampleIndex + i * 2 >= samples.Length)
+//                     break;
+//                 float sample = samples[sampleIndex + i * 2];
+//                 energy += sample * sample;
+//             }
+//             energy /= windowSize;
+//             if (sampleIndex / moveLength >= historySize)
+//             {
+//                 float average = 0;
+//                 for (int j = 0; j < historySize; j++)
+//                 {
+//                     average += energyHistory[j];
+//                 }
+//                 average /= historySize;
+
+//                 float variance = 0;
+//                 for (int j = 0; j < historySize; j++)
+//                 {
+//                     variance += Mathf.Pow(energyHistory[j] - average, 2);
+//                 }
+//                 variance /= historySize;
+
+//                 float C = 1.5142857f - variance / average / average * 0.0025714f;
+//                 float currentTime = (float)(sampleIndex) / sampleRate / 2;
+//                 if (energy > sensitivity * C * average && currentTime - lastTime > step)
+//                 {
+//                     notes.Add(new Note
+//                     {
+//                         time = currentTime,
+//                         track = (int)Mathf.Clamp(energy / average, 1, 4) - 1,
+//                     });
+//                     lastTime = currentTime;
+//                 }
+//             }
+
+//             energyHistory[historyIndex] = energy;
+//             historyIndex = (historyIndex + 1) % historySize;
+//         }
+//         segment.Dispose();
+
+//         return notes;
+//     }
+// }

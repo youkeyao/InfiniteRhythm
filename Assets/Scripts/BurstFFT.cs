@@ -30,31 +30,6 @@ public sealed class BurstFFT : System.IDisposable
         if (_O.IsCreated) _O.Dispose();
     }
 
-#if SINGLE_THREAD
-
-    public void Transform(NativeArray<float> input)
-    {
-        var X = TempJobMemory.New<float4>(_N / 2);
-
-        // Bit-reversal permutation and first DFT pass
-        new FirstPassJob { I = input, P = _P, X = X }.Run(_N / 2);
-
-        // 2nd and later DFT passes
-        for (var i = 0; i < _logN - 1; i++)
-        {
-            var T_slice = new NativeSlice<TFactor>(_T, _N / 4 * i);
-            new DftPassJob { T = T_slice, X = X }.Run(_N / 4);
-        }
-
-        // Postprocess (power spectrum calculation)
-        var O2 = _O.Reinterpret<float2>(sizeof(float));
-        new PostprocessJob { X = X, O = O2, s = 2.0f / _N }.Run(_N / 2);
-
-        X.Dispose();
-    }
-
-#else
-
     public void Transform(NativeArray<float> input)
     {
         var X = new NativeArray<float4>(_N / 2, Allocator.TempJob);
@@ -79,8 +54,6 @@ public sealed class BurstFFT : System.IDisposable
         handle.Complete();
         X.Dispose();
     }
-
-#endif
 
     #endregion
 
