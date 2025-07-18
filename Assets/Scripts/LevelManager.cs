@@ -13,6 +13,8 @@ public class LevelManager : MonoBehaviour
     public NoteManager noteManager;
     public CameraMover cameraMover;
 
+    public GameObject playButton;
+
     AudioSource m_audioSource;
     List<string> m_levels = new List<string>();
     int m_currentLevel = 0;
@@ -56,22 +58,23 @@ public class LevelManager : MonoBehaviour
 
     void Update()
     {
-        // if (m_audioSource.isPlaying)
-        // {
-        //     float[] samples = new float[ChartGenerator.windowSize];
-        //     m_audioSource.GetSpectrumData(samples, 0, FFTWindow.BlackmanHarris);
+        if (m_audioSource.isPlaying)
+        {
+            float[] samples = new float[ChartGenerator.windowSize];
+            m_audioSource.GetSpectrumData(samples, 0, FFTWindow.BlackmanHarris);
 
-        //     for (int i = 0; i < samples.Length; i++)
-        //     {
-        //         float note = samples[i];
-        //         gameObjects[i].transform.localScale = new Vector3(1, note * 200, 1);
-        //     }
-        // }
+            for (int i = 0; i < samples.Length; i++)
+            {
+                float note = samples[i];
+                gameObjects[i].transform.localScale = new Vector3(1, note * 200, 1);
+            }
+        }
     }
 
     public void Play()
     {
         StartCoroutine(LoadLevel());
+        playButton.SetActive(false);
     }
 
     private IEnumerator<UnityWebRequestAsyncOperation> LoadLevel()

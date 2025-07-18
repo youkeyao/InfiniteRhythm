@@ -67,11 +67,7 @@ public class NoteManager : MonoBehaviour
                     }
                 }
             }
+            Graphics.DrawMeshInstanced(noteMesh, 0, noteMaterial, m_spawnList.ToArray(), m_spawnList.Count);
         }
-    }
-
-    void OnRenderObject()
-    {
-        Graphics.DrawMeshInstanced(noteMesh, 0, noteMaterial, m_spawnList.ToArray(), m_spawnList.Count);
     }
 }
