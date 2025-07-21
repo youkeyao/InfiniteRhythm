@@ -5,6 +5,7 @@ using UnityEngine;
 public class CameraMover : MonoBehaviour
 {
     Vector3 m_initPosition;
+    Quaternion m_initRotation;
     bool m_isPlaying = false;
     float m_startTime = 0;
     float m_speed = 10.0f;
@@ -12,6 +13,7 @@ public class CameraMover : MonoBehaviour
     public void Start()
     {
         m_initPosition = transform.position;
+        m_initRotation = transform.rotation;
     }
 
     public void Play(float speed)
@@ -26,8 +28,9 @@ public class CameraMover : MonoBehaviour
         if (m_isPlaying)
         {
             float currentTime = Time.time - m_startTime;
-            Vector3 position = m_initPosition + new Vector3(0, 0, currentTime * m_speed);
-            transform.position = position;
+            Matrix4x4 targetTransform = RoadGenerator.GetTransform(currentTime * m_speed);
+            transform.position = targetTransform.rotation * m_initPosition + targetTransform.GetPosition();
+            transform.rotation = targetTransform.rotation * m_initRotation;
         }
     }
 }

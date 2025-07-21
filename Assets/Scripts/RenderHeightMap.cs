@@ -1,6 +1,7 @@
 using System.IO;
 using UnityEngine;
 
+// Render Mesh Height Map
 public class RenderHeightMap : MonoBehaviour
 {
     public Mesh mesh;

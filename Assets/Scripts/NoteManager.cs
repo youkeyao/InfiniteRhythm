@@ -17,12 +17,14 @@ public class NoteManager : MonoBehaviour
     };
 
     List<Note> m_chart;
+    List<float> m_spawnTime = new List<float>();
     List<Matrix4x4> m_spawnList = new List<Matrix4x4>();
     int m_numTracks = 4;
     float m_startTime = 0;
     float m_speed = 10.0f;
     bool m_isPlaying = false;
     int m_noteIndex = 0;
+    float m_trackThreshold = 0.2f;
 
     public void Play(List<Note> chart, float speed)
     {
@@ -40,33 +42,51 @@ public class NoteManager : MonoBehaviour
             float currentTime = Time.time - m_startTime;
             float spacing = -transform.position.x * 2 / (m_numTracks - 1);
 
-            while (m_spawnList.Count > 0 && m_spawnList[0].GetPosition().z < (currentTime - 1) * m_speed)
+            // Dispose
+            while (m_spawnTime.Count > 0 && m_spawnTime[0] < currentTime - 1)
             {
+                m_spawnTime.RemoveAt(0);
                 m_spawnList.RemoveAt(0);
             }
+
+            // Spawn
             while (m_noteIndex < m_chart.Count && currentTime >= m_chart[m_noteIndex].time - distance / m_speed)
             {
-                Vector3 spawnPos = new Vector3(m_chart[m_noteIndex].track * spacing, 0, m_chart[m_noteIndex].time * m_speed) + transform.position;
-                m_spawnList.Add(Matrix4x4.Translate(spawnPos) * Matrix4x4.Scale(noteScale));
+                Vector3 offset = new Vector3(m_chart[m_noteIndex].track * spacing, 0, 0);
+                Matrix4x4 spawnTransform = RoadGenerator.GetTransform(m_chart[m_noteIndex].time * m_speed);
+                m_spawnList.Add(spawnTransform * Matrix4x4.Translate(offset) * transform.localToWorldMatrix * Matrix4x4.Scale(noteScale));
+                m_spawnTime.Add(m_chart[m_noteIndex].time);
                 m_noteIndex++;
             }
+
+            // Hit
             for (int i = 0; i < m_spawnList.Count; i++)
             {
                 Vector3 position = m_spawnList[i].GetPosition();
-                if (position.z > (currentTime * m_speed + hitThreshold))
+                Matrix4x4 targetTransform = RoadGenerator.GetTransform(currentTime * m_speed);
+                Vector3 targetPosition = targetTransform.GetPosition();
+                Vector3 targetDiretion = targetTransform.MultiplyVector(Vector3.forward);
+                Vector3 offsetDirection = targetTransform.MultiplyVector(Vector3.right);
+                float targetDistance = Vector3.Dot(targetPosition, targetDiretion);
+                float nowDistance = Vector3.Dot(position, targetDiretion);
+                if (nowDistance > (targetDistance + hitThreshold))
                     break;
-                if ((currentTime * m_speed - hitThreshold) < position.z)
+                if ((targetDistance - hitThreshold) < nowDistance)
                 {
                     for (int j = 0; j < m_numTracks; j++)
                     {
-                        if (Input.GetKeyDown(keyCodes[j]) && Mathf.Approximately(position.x, transform.position.x + spacing * j))
+                        float offset = Vector3.Dot(position - targetPosition, offsetDirection);
+                        if (Input.GetKeyDown(keyCodes[j]) && Mathf.Abs(offset - (transform.position.x + j * spacing)) < m_trackThreshold)
                         {
+                            m_spawnTime.RemoveAt(i);
                             m_spawnList.RemoveAt(i);
                             i--;
                         }
                     }
                 }
             }
+
+            // Draw
             Graphics.DrawMeshInstanced(noteMesh, 0, noteMaterial, m_spawnList.ToArray(), m_spawnList.Count);
         }
     }

@@ -39,6 +39,7 @@ public class MapManager : MonoBehaviour
     public VegetationData[] vegDatas;
 
     // private variables
+    private float m_roadDistance = 0;
     private float[] m_landDistances;
     private Queue<Matrix4x4> m_roadSpawnQueue = new Queue<Matrix4x4>();
     private List<Queue<Matrix4x4>> m_landSpawnQueues = new List<Queue<Matrix4x4>>();
@@ -69,42 +70,44 @@ public class MapManager : MonoBehaviour
     void Update()
     {
         GenerateRoad();
-        GenerateLand();
+        // GenerateLand();
 
-        // Dispose & Draw
+        // // Dispose & Draw
+        // while (m_roadSpawnQueue.Count > 0 && m_roadSpawnQueue.Peek().GetPosition().z < cameraTransform.position.z)
+        // {
+        //     m_roadSpawnQueue.Dequeue();
+        // }
         Graphics.DrawMeshInstanced(roadMesh, 0, mapMaterial, m_roadSpawnQueue.ToArray(), m_roadSpawnQueue.Count);
-        for (int i = 0; i < landDatas.Length; i++)
-        {
-            while (m_landSpawnQueues[i].Count > 0 && m_landSpawnQueues[i].Peek().GetPosition().z < cameraTransform.position.z - landSpacing[1])
-            {
-                m_landSpawnQueues[i].Dequeue();
-            }
-            Graphics.DrawMeshInstanced(landDatas[i].mesh, 0, mapMaterial, m_landSpawnQueues[i].ToArray(), m_landSpawnQueues[i].Count);
-        }
-        for (int i = 0; i < vegDatas.Length; i++)
-        {
-            while (m_vegSpawnQueues[i].Count > 0 && m_vegSpawnQueues[i].Peek().GetPosition().z < cameraTransform.position.z)
-            {
-                m_vegSpawnQueues[i].Dequeue();
-            }
-            Graphics.DrawMeshInstanced(vegDatas[i].mesh, 0, mapMaterial, m_vegSpawnQueues[i].ToArray(), m_vegSpawnQueues[i].Count);
-        }
+        // for (int i = 0; i < landDatas.Length; i++)
+        // {
+        //     while (m_landSpawnQueues[i].Count > 0 && m_landSpawnQueues[i].Peek().GetPosition().z < cameraTransform.position.z - landSpacing[1])
+        //     {
+        //         m_landSpawnQueues[i].Dequeue();
+        //     }
+        //     Graphics.DrawMeshInstanced(landDatas[i].mesh, 0, mapMaterial, m_landSpawnQueues[i].ToArray(), m_landSpawnQueues[i].Count);
+        // }
+        // for (int i = 0; i < vegDatas.Length; i++)
+        // {
+        //     while (m_vegSpawnQueues[i].Count > 0 && m_vegSpawnQueues[i].Peek().GetPosition().z < cameraTransform.position.z)
+        //     {
+        //         m_vegSpawnQueues[i].Dequeue();
+        //     }
+        //     Graphics.DrawMeshInstanced(vegDatas[i].mesh, 0, mapMaterial, m_vegSpawnQueues[i].ToArray(), m_vegSpawnQueues[i].Count);
+        // }
     }
 
     void GenerateRoad()
     {
-        while (m_roadSpawnQueue.Count > 0 && m_roadSpawnQueue.Peek().GetPosition().z < cameraTransform.position.z)
-        {
-            m_roadSpawnQueue.Dequeue();
-        }
-        while (m_roadSpawnQueue.Count < (int)distance / roadSpacing)
+        while (m_roadDistance < Time.time * 15)
         {
             Quaternion rotation = Quaternion.Euler(roadRotation);
             if (m_random.NextBool())
             {
                 rotation *= Quaternion.Euler(0, 180, 0);
             }
-            m_roadSpawnQueue.Enqueue(Matrix4x4.TRS(Vector3.forward * (cameraTransform.position.z + m_roadSpawnQueue.Count * roadSpacing), rotation, roadScale));
+            Matrix4x4 targetTransform = RoadGenerator.GetTransform(m_roadDistance);
+            m_roadSpawnQueue.Enqueue(targetTransform * Matrix4x4.TRS(Vector3.zero, rotation, roadScale));
+            m_roadDistance += roadSpacing;
         }
     }
 
