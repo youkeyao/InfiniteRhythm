@@ -15,6 +15,9 @@ public class LevelManager : MonoBehaviour
 
     public GameObject playButton;
 
+    public bool isPlaying  = false;
+    public float startTime = 0;
+
     AudioSource m_audioSource;
     List<string> m_levels = new List<string>();
     int m_currentLevel = 0;
@@ -89,10 +92,12 @@ public class LevelManager : MonoBehaviour
             AudioClip audioClip = DownloadHandlerAudioClip.GetContent(musicRequest);
             currentChart = ChartGenerator.GetChart(audioClip);
 
-            noteManager.Play(currentChart, speed);
-            cameraMover.Play(speed);
+            noteManager.Play(currentChart);
             m_audioSource.clip = audioClip;
             m_audioSource.Play();
+
+            isPlaying = true;
+            startTime = Time.time;
         }
     }
 }

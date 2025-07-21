@@ -226,9 +226,9 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 148490993}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.043619405, y: -0, z: -0, w: 0.9990483}
-  m_LocalPosition: {x: 2, y: -4.1094155, z: 10.397726}
-  m_LocalScale: {x: 1, y: 0.30000007, z: 1}
+  m_LocalRotation: {x: -0.052335896, y: -0, z: -0, w: 0.9986295}
+  m_LocalPosition: {x: 2, y: -2.2518673, z: 7.2752385}
+  m_LocalScale: {x: 1, y: 0.3000001, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 963194228}
@@ -331,9 +331,9 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 221887786}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.043619405, y: -0, z: -0, w: 0.9990483}
-  m_LocalPosition: {x: 6, y: -4.1094155, z: 10.397726}
-  m_LocalScale: {x: 1, y: 0.30000007, z: 1}
+  m_LocalRotation: {x: -0.052335896, y: -0, z: -0, w: 0.9986295}
+  m_LocalPosition: {x: 6, y: -2.2518673, z: 7.2752385}
+  m_LocalScale: {x: 1, y: 0.3000001, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 963194228}
@@ -889,11 +889,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e723c8e4d4e131f47b0f8e56035c891c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  levelManager: {fileID: 1865306863}
   noteScale: {x: 1, y: 0.3, z: 1}
   noteMesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
   noteMaterial: {fileID: 2100000, guid: 4c337ed197e463c40ae6422fbbbf5258, type: 2}
   hitThreshold: 1.5
-  distance: 50
+  showDistance: 50
   keyCodes: 61000000640000006a0000006c000000
 --- !u!4 &527870824
 Transform:
@@ -904,7 +905,7 @@ Transform:
   m_GameObject: {fileID: 527870822}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -6, y: 6, z: 0}
+  m_LocalPosition: {x: -6, y: 4.5, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1178,9 +1179,9 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 709353785}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.043619405, y: -0, z: -0, w: 0.9990483}
-  m_LocalPosition: {x: -6, y: -4.1094155, z: 10.397726}
-  m_LocalScale: {x: 1, y: 0.30000007, z: 1}
+  m_LocalRotation: {x: -0.052335896, y: -0, z: -0, w: 0.9986295}
+  m_LocalPosition: {x: -6, y: -2.2518673, z: 7.2752385}
+  m_LocalScale: {x: 1, y: 0.3000001, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 963194228}
@@ -1475,8 +1476,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 963194225}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.043619405, y: -0, z: -0, w: 0.9990483}
-  m_LocalPosition: {x: 6, y: 5, z: -10}
+  m_LocalRotation: {x: 0.052335896, y: 0, z: 0, w: 0.9986295}
+  m_LocalPosition: {x: 6, y: 3, z: -7}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1485,7 +1486,7 @@ Transform:
   - {fileID: 148490994}
   - {fileID: 221887787}
   m_Father: {fileID: 527870824}
-  m_LocalEulerAnglesHint: {x: 5, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 6, y: 0, z: 0}
 --- !u!114 &963194229
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1498,6 +1499,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b8d704571fb8db04baa37023820d822e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  levelManager: {fileID: 1865306863}
 --- !u!1001 &1091798482
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1789,98 +1791,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: d5b8de414112a004a82d0437b5f7a780, type: 3}
---- !u!1 &1602837694
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1602837696}
-  - component: {fileID: 1602837695}
-  m_Layer: 0
-  m_Name: MapManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1602837695
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1602837694}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e8565837a5b4e8848bf1c016e4c0b9ae, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  distance: 200
-  cameraTransform: {fileID: 963194228}
-  mapMaterial: {fileID: 2100000, guid: 0799a1e95665ef14f8fe2cbcd4ba3dc4, type: 2}
-  roadSpacing: 15
-  roadRotation: {x: 0, y: 90, z: 0}
-  roadScale: {x: 1, y: 1, z: 1}
-  roadMesh: {fileID: 2298263045900952535, guid: 324d33f3ad1481c4e8ba55d696fe64d9, type: 3}
-  landCol: 4
-  landOverlap: 0.1
-  landSpacing: {x: 10, y: 40}
-  landDatas:
-  - scale: {x: 1.8, y: 1.7, z: 1.8}
-    mesh: {fileID: 4300000, guid: 947e8da8987d86a41b3f384b39ec37cd, type: 2}
-    heightMap: {fileID: 2800000, guid: 0638cb55337899646a1374a7f3a8f72d, type: 3}
-  - scale: {x: 2, y: 1.1, z: 2}
-    mesh: {fileID: 5355927448623902033, guid: 5d113e0df0acd474cb544e13e9327875, type: 3}
-    heightMap: {fileID: 2800000, guid: 508512af836115e4d964082f8e9df00d, type: 3}
-  - scale: {x: 2, y: 1.1, z: 2}
-    mesh: {fileID: 672551834481701363, guid: 08eefc2f613faa34fbb717ac2142af0a, type: 3}
-    heightMap: {fileID: 2800000, guid: 19e9398a3429914498796d99b5aa5635, type: 3}
-  vegDatas:
-  - mesh: {fileID: -808811649734903215, guid: d721af70c8ba1ab4daa81f30de0dbb54, type: 3}
-    minCountPerLand: 5
-    maxCountPerLand: 10
-  - mesh: {fileID: 3015167987163436581, guid: ddd36401006c8654eae1d9a6bcd6380d, type: 3}
-    minCountPerLand: 5
-    maxCountPerLand: 10
-  - mesh: {fileID: 2249462234500842342, guid: c6b568bf9e55de141add501b8cd2a0e9, type: 3}
-    minCountPerLand: 5
-    maxCountPerLand: 10
-  - mesh: {fileID: 5006698605598939749, guid: a3ccb41ae53c6bf4bb0a5bfc470bf069, type: 3}
-    minCountPerLand: 5
-    maxCountPerLand: 10
-  - mesh: {fileID: 1090956746362370221, guid: 3184c8a016da6e34abff1686da99650b, type: 3}
-    minCountPerLand: 0
-    maxCountPerLand: 2
-  - mesh: {fileID: -1806810134458854372, guid: 7ed75b99c26237b4d844c1581c5da1b2, type: 3}
-    minCountPerLand: 0
-    maxCountPerLand: 2
-  - mesh: {fileID: -7011766824195413768, guid: b0ba9b7cecd675b45894beca57389899, type: 3}
-    minCountPerLand: 0
-    maxCountPerLand: 2
-  - mesh: {fileID: 5902438668197411763, guid: 4e40842238bcca046a7c50ffff32b019, type: 3}
-    minCountPerLand: 5
-    maxCountPerLand: 10
-  - mesh: {fileID: 1803037753767285088, guid: 46d171de72518e343891c4b4c03e5103, type: 3}
-    minCountPerLand: 5
-    maxCountPerLand: 10
---- !u!4 &1602837696
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1602837694}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1726743782
 GameObject:
   m_ObjectHideFlags: 0
@@ -2073,8 +1983,10 @@ GameObject:
   m_Component:
   - component: {fileID: 1865306864}
   - component: {fileID: 1865306863}
+  - component: {fileID: 1865306866}
+  - component: {fileID: 1865306865}
   m_Layer: 0
-  m_Name: LevelManager
+  m_Name: GameManager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2097,6 +2009,8 @@ MonoBehaviour:
   noteManager: {fileID: 527870823}
   cameraMover: {fileID: 963194229}
   playButton: {fileID: 737880857}
+  isPlaying: 0
+  startTime: 0
 --- !u!4 &1865306864
 Transform:
   m_ObjectHideFlags: 0
@@ -2112,6 +2026,80 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1865306865
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1865306862}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6298ea23c667e03488b123ebbbf22194, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  audioClip: {fileID: 0}
+--- !u!114 &1865306866
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1865306862}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e8565837a5b4e8848bf1c016e4c0b9ae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  levelManager: {fileID: 1865306863}
+  showDistance: 200
+  cameraTransform: {fileID: 963194228}
+  mapMaterial: {fileID: 2100000, guid: 0799a1e95665ef14f8fe2cbcd4ba3dc4, type: 2}
+  roadSpacing: 15
+  roadRotation: {x: 0, y: 90, z: 0}
+  roadScale: {x: 1, y: 1, z: 1}
+  roadMesh: {fileID: 2298263045900952535, guid: 324d33f3ad1481c4e8ba55d696fe64d9, type: 3}
+  landCol: 2
+  landOverlap: 0.3
+  landSpacing: {x: 20, y: 40}
+  landDatas:
+  - scale: {x: 1.8, y: 1.7, z: 1.8}
+    mesh: {fileID: 4300000, guid: 947e8da8987d86a41b3f384b39ec37cd, type: 2}
+    heightMap: {fileID: 2800000, guid: 0638cb55337899646a1374a7f3a8f72d, type: 3}
+  - scale: {x: 2, y: 1.1, z: 2}
+    mesh: {fileID: 5355927448623902033, guid: 5d113e0df0acd474cb544e13e9327875, type: 3}
+    heightMap: {fileID: 2800000, guid: 508512af836115e4d964082f8e9df00d, type: 3}
+  - scale: {x: 2, y: 1.1, z: 2}
+    mesh: {fileID: 672551834481701363, guid: 08eefc2f613faa34fbb717ac2142af0a, type: 3}
+    heightMap: {fileID: 2800000, guid: 19e9398a3429914498796d99b5aa5635, type: 3}
+  vegDatas:
+  - mesh: {fileID: -808811649734903215, guid: d721af70c8ba1ab4daa81f30de0dbb54, type: 3}
+    minCountPerLand: 5
+    maxCountPerLand: 10
+  - mesh: {fileID: 3015167987163436581, guid: ddd36401006c8654eae1d9a6bcd6380d, type: 3}
+    minCountPerLand: 5
+    maxCountPerLand: 10
+  - mesh: {fileID: 2249462234500842342, guid: c6b568bf9e55de141add501b8cd2a0e9, type: 3}
+    minCountPerLand: 5
+    maxCountPerLand: 10
+  - mesh: {fileID: 5006698605598939749, guid: a3ccb41ae53c6bf4bb0a5bfc470bf069, type: 3}
+    minCountPerLand: 5
+    maxCountPerLand: 10
+  - mesh: {fileID: 1090956746362370221, guid: 3184c8a016da6e34abff1686da99650b, type: 3}
+    minCountPerLand: 0
+    maxCountPerLand: 2
+  - mesh: {fileID: -1806810134458854372, guid: 7ed75b99c26237b4d844c1581c5da1b2, type: 3}
+    minCountPerLand: 0
+    maxCountPerLand: 2
+  - mesh: {fileID: -7011766824195413768, guid: b0ba9b7cecd675b45894beca57389899, type: 3}
+    minCountPerLand: 0
+    maxCountPerLand: 2
+  - mesh: {fileID: 5902438668197411763, guid: 4e40842238bcca046a7c50ffff32b019, type: 3}
+    minCountPerLand: 5
+    maxCountPerLand: 10
+  - mesh: {fileID: 1803037753767285088, guid: 46d171de72518e343891c4b4c03e5103, type: 3}
+    minCountPerLand: 5
+    maxCountPerLand: 10
 --- !u!1 &1956470265
 GameObject:
   m_ObjectHideFlags: 0
@@ -2408,9 +2396,9 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2052598516}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.043619405, y: -0, z: -0, w: 0.9990483}
-  m_LocalPosition: {x: -2, y: -4.1094155, z: 10.397726}
-  m_LocalScale: {x: 1, y: 0.30000007, z: 1}
+  m_LocalRotation: {x: -0.052335896, y: -0, z: -0, w: 0.9986295}
+  m_LocalPosition: {x: -2, y: -2.2518673, z: 7.2752385}
+  m_LocalScale: {x: 1, y: 0.3000001, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 963194228}
@@ -2493,7 +2481,6 @@ SceneRoots:
   - {fileID: 705507995}
   - {fileID: 1865306864}
   - {fileID: 527870824}
-  - {fileID: 1602837696}
   - {fileID: 307238520}
   - {fileID: 242178472}
   - {fileID: 1350143802}

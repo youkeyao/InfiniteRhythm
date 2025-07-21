@@ -4,11 +4,10 @@ using UnityEngine;
 
 public class CameraMover : MonoBehaviour
 {
+    public LevelManager levelManager;
+
     Vector3 m_initPosition;
     Quaternion m_initRotation;
-    bool m_isPlaying = false;
-    float m_startTime = 0;
-    float m_speed = 10.0f;
 
     public void Start()
     {
@@ -16,19 +15,12 @@ public class CameraMover : MonoBehaviour
         m_initRotation = transform.rotation;
     }
 
-    public void Play(float speed)
-    {
-        m_isPlaying = true;
-        m_startTime = Time.time;
-        m_speed = speed;
-    }
-
     void Update()
     {
-        if (m_isPlaying)
+        if (levelManager.isPlaying)
         {
-            float currentTime = Time.time - m_startTime;
-            Matrix4x4 targetTransform = RoadGenerator.GetTransform(currentTime * m_speed);
+            float currentTime = Time.time - levelManager.startTime;
+            Matrix4x4 targetTransform = RoadGenerator.GetTransform(currentTime * levelManager.speed);
             transform.position = targetTransform.rotation * m_initPosition + targetTransform.GetPosition();
             transform.rotation = targetTransform.rotation * m_initRotation;
         }

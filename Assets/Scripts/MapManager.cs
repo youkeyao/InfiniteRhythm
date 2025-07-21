@@ -19,7 +19,9 @@ public struct VegetationData
 
 public class MapManager : MonoBehaviour
 {
-    public float distance = 50.0f;
+    public LevelManager levelManager;
+
+    public float showDistance = 200.0f;
     public Transform cameraTransform;
     public Material mapMaterial;
 
@@ -30,7 +32,7 @@ public class MapManager : MonoBehaviour
     public Mesh roadMesh;
 
     // land
-    public int landCol;
+    public int landCol = 2;
     public float landOverlap = 0.1f;
     public Vector2 landSpacing;
     public LandData[] landDatas;
@@ -39,14 +41,14 @@ public class MapManager : MonoBehaviour
     public VegetationData[] vegDatas;
 
     // private variables
-    private float m_roadDistance = 0;
-    private float[] m_landDistances;
-    private Queue<Matrix4x4> m_roadSpawnQueue = new Queue<Matrix4x4>();
-    private List<Queue<Matrix4x4>> m_landSpawnQueues = new List<Queue<Matrix4x4>>();
-    private List<int> m_lastLandIndex = new List<int>();
-    private List<Queue<Matrix4x4>> m_vegSpawnQueues = new List<Queue<Matrix4x4>>();
+    float m_roadDistance = 0;
+    float[] m_landDistances;
+    Queue<Matrix4x4> m_roadSpawnQueue = new Queue<Matrix4x4>();
+    List<Queue<Matrix4x4>> m_landSpawnQueues = new List<Queue<Matrix4x4>>();
+    List<int> m_lastLandIndex = new List<int>();
+    List<Queue<Matrix4x4>> m_vegSpawnQueues = new List<Queue<Matrix4x4>>();
 
-    private Unity.Mathematics.Random m_random;
+    Unity.Mathematics.Random m_random;
 
     void Start()
     {
@@ -69,23 +71,26 @@ public class MapManager : MonoBehaviour
 
     void Update()
     {
-        GenerateRoad();
-        // GenerateLand();
+        if (levelManager.isPlaying)
+        {
+            GenerateRoad();
+            GenerateLand();
+        }
 
-        // // Dispose & Draw
-        // while (m_roadSpawnQueue.Count > 0 && m_roadSpawnQueue.Peek().GetPosition().z < cameraTransform.position.z)
-        // {
-        //     m_roadSpawnQueue.Dequeue();
-        // }
+        // Dispose & Draw
+        while (m_roadSpawnQueue.Count > 0 && Vector3.Dot(m_roadSpawnQueue.Peek().GetPosition() - cameraTransform.position, cameraTransform.forward) < 0)
+        {
+            m_roadSpawnQueue.Dequeue();
+        }
         Graphics.DrawMeshInstanced(roadMesh, 0, mapMaterial, m_roadSpawnQueue.ToArray(), m_roadSpawnQueue.Count);
-        // for (int i = 0; i < landDatas.Length; i++)
-        // {
-        //     while (m_landSpawnQueues[i].Count > 0 && m_landSpawnQueues[i].Peek().GetPosition().z < cameraTransform.position.z - landSpacing[1])
-        //     {
-        //         m_landSpawnQueues[i].Dequeue();
-        //     }
-        //     Graphics.DrawMeshInstanced(landDatas[i].mesh, 0, mapMaterial, m_landSpawnQueues[i].ToArray(), m_landSpawnQueues[i].Count);
-        // }
+        for (int i = 0; i < landDatas.Length; i++)
+        {
+            while (m_landSpawnQueues[i].Count > 0 && Vector3.Dot(m_landSpawnQueues[i].Peek().GetPosition() - cameraTransform.position + cameraTransform.forward * landSpacing[1], cameraTransform.forward) < 0)
+            {
+                m_landSpawnQueues[i].Dequeue();
+            }
+            Graphics.DrawMeshInstanced(landDatas[i].mesh, 0, mapMaterial, m_landSpawnQueues[i].ToArray(), m_landSpawnQueues[i].Count);
+        }
         // for (int i = 0; i < vegDatas.Length; i++)
         // {
         //     while (m_vegSpawnQueues[i].Count > 0 && m_vegSpawnQueues[i].Peek().GetPosition().z < cameraTransform.position.z)
@@ -98,7 +103,8 @@ public class MapManager : MonoBehaviour
 
     void GenerateRoad()
     {
-        while (m_roadDistance < Time.time * 15)
+        float currentTime = Time.time - levelManager.startTime;
+        while (m_roadDistance < currentTime * levelManager.speed + showDistance)
         {
             Quaternion rotation = Quaternion.Euler(roadRotation);
             if (m_random.NextBool())
@@ -113,6 +119,7 @@ public class MapManager : MonoBehaviour
 
     void GenerateLand()
     {
+        float currentTime = Time.time - levelManager.startTime;
         int minIndex = 0;
         for (int i = 1; i < landCol; i++)
         {
@@ -121,7 +128,7 @@ public class MapManager : MonoBehaviour
                 minIndex = i;
             }
         }
-        while (m_landDistances[minIndex] < cameraTransform.position.z + distance)
+        while (m_landDistances[minIndex] < currentTime * levelManager.speed + showDistance)
         {
             int landIndex = m_random.NextInt(0, landDatas.Length);
 
@@ -135,12 +142,12 @@ public class MapManager : MonoBehaviour
             float X = landSpacing[0] * Mathf.Sign(landColOffset) + landColOffset * landSpacing[1];
             Vector3 meshBoundSize = landDatas[landIndex].mesh.bounds.size;
             Vector3 landSize = new Vector3(meshBoundSize.x * landDatas[landIndex].scale.x, meshBoundSize.y * landDatas[landIndex].scale.y, meshBoundSize.z * landDatas[landIndex].scale.z);
-            Vector3 landPos = new Vector3(X, 0, m_landDistances[minIndex] + (1 - landOverlap) * landSize.z / 2);
-            m_landSpawnQueues[landIndex].Enqueue(Matrix4x4.TRS(landPos, Quaternion.identity, landDatas[landIndex].scale));
+            Matrix4x4 landTransform = RoadGenerator.GetTransform(m_landDistances[minIndex]) * Matrix4x4.TRS(new Vector3(X, 0, 0), Quaternion.identity, landDatas[landIndex].scale);
+            m_landSpawnQueues[landIndex].Enqueue(landTransform);
             m_landDistances[minIndex] += (1 - landOverlap) * landSize.z;
 
             // generate vegetation
-            GenerateVegetation(landPos, landSize, landDatas[landIndex].heightMap);
+            GenerateVegetation(landTransform, landSize, landDatas[landIndex].heightMap);
             for (int i = 0; i < landCol; i++)
             {
                 if (m_landDistances[i] < m_landDistances[minIndex])
@@ -151,8 +158,9 @@ public class MapManager : MonoBehaviour
         }
     }
 
-    void GenerateVegetation(Vector3 landPos, Vector3 landSize, Texture2D heightMap)
+    void GenerateVegetation(Matrix4x4 landTransform, Vector3 landSize, Texture2D heightMap)
     {
+        Vector3 landPos = landTransform.GetPosition();
         for (int i = 0; i < vegDatas.Length; i++)
         {
             int vegCount = m_random.NextInt(vegDatas[i].minCountPerLand, vegDatas[i].maxCountPerLand);

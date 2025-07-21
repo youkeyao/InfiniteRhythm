@@ -98,11 +98,11 @@ public static class RoadGenerator
     public static float baseSegmentLength = 100f;
     public static int samplesPerSegment = 100;
 
-    private static ControlPoint[] s_controlPoints = InitializeControlPoints();
-    private static int s_controlPointsHead = 0;
-    public static int s_controlPointsSize = 1;
-    private static BezierCurve[] s_curves = new BezierCurve[ControlPointCapacity]; // curve i -> controlPoints[i] - > controlPoints[i + 1]
-    private static float s_totalLength = 0;
+    static ControlPoint[] s_controlPoints = InitializeControlPoints();
+    static int s_controlPointsHead = 0;
+    static int s_controlPointsSize = 1;
+    static BezierCurve[] s_curves = new BezierCurve[ControlPointCapacity]; // curve i -> controlPoints[i] - > controlPoints[i + 1]
+    static float s_totalLength = 0;
 
     static ControlPoint[] InitializeControlPoints()
     {
