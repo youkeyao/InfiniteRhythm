@@ -4,79 +4,97 @@ using System.Collections;
 using System.Text;
 using NativeWebSocket;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 class AudioManager : MonoBehaviour
 {
-    public AudioClip audioClip;
-
     private AudioSource m_audioSource;
+    private List<AudioClip> m_audioClips = new List<AudioClip>();
     private string m_wsurl = "wss://generativelanguage.googleapis.com//ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateMusic?key=AIzaSyBE_WpYLV2beN9E52AUsGTjzjs82_DVT_I";
     private WebSocket m_webSocket;
 
     async void Start()
     {
-        // m_audioSource = gameObject.AddComponent<AudioSource>();
+        m_audioSource = gameObject.AddComponent<AudioSource>();
         // m_audioSource.clip = audioClip;
         // m_audioSource.loop = true;
         // m_audioSource.Play();
 
         // StartCoroutine(SendGeminiMusicRequest("prompt"));
 
-        // Dictionary<string, string> headers = new Dictionary<string, string>
-        // {
-        //     { "Content-Type", "application/json" },
-        //     { "x-goog-api-key", "AIzaSyBE_WpYLV2beN9E52AUsGTjzjs82_DVT_I" },
-        //     { "user-agent", "google-genai-sdk/1.26.0 gl-python/3.12.0" },
-        //     { "x-goog-api-client", "google-genai-sdk/1.26.0 gl-python/3.12.0" }
-        // };
-        // Debug.Log(headers.ToString());
-        // m_webSocket = new WebSocket(m_wsurl, headers);
-        // m_webSocket.OnOpen += () => Debug.Log("WebSocket Opened!");
-        // m_webSocket.OnError += (e) => Debug.Log("WebSocket Error: " + e);
-        // m_webSocket.OnClose += (e) => Debug.Log("WebSocket Closed: " + e);
-        // m_webSocket.OnMessage += (bytes) =>
-        // {
-        //     string message = Encoding.UTF8.GetString(bytes);
-        //     Debug.Log("WebSocket Message: " + message);
-        // };
-        // await m_webSocket.Connect();
+        Dictionary<string, string> headers = new Dictionary<string, string>
+        {
+            { "Content-Type", "application/json" },
+            { "x-goog-api-key", "AIzaSyBE_WpYLV2beN9E52AUsGTjzjs82_DVT_I" },
+            { "user-agent", "google-genai-sdk/1.26.0 gl-python/3.12.0" },
+            { "x-goog-api-client", "google-genai-sdk/1.26.0 gl-python/3.12.0" }
+        };
+        m_webSocket = new WebSocket(m_wsurl, headers);
+        m_webSocket.OnOpen += () =>
+        {
+            Debug.Log("WebSocket Opened!");
+            Setup();
+            SetWeightedPrompts("minimal techno", 1.0f);
+            SetMusicGenerationConfig(1.0f, 90);
+            Play();
+        };
+        m_webSocket.OnError += (e) => Debug.Log("WebSocket Error: " + e);
+        m_webSocket.OnClose += (e) => Debug.Log("WebSocket Closed: " + e);
+        m_webSocket.OnMessage += (bytes) =>
+        {
+            string message = Encoding.UTF8.GetString(bytes);
+            Debug.Log("WebSocket Message: " + message);
+        };
+        await m_webSocket.Connect();
+    }
+
+    async void Setup()
+    {
+        await m_webSocket.SendText("{\"setup\": {\"model\": \"models/lyria-realtime-exp\"}}");
+    }
+
+    async void SetWeightedPrompts(string prompt, float weight)
+    {
+        string message = $"{{\"clientContent\": {{\"weightedPrompts\": [{{\"text\": \"{prompt}\", \"weight\": {weight}}}]}}}}";
+        await m_webSocket.SendText(message);
+    }
+
+    async void SetMusicGenerationConfig(float temperature, int bpm)
+    {
+        string message = $"{{\"musicGenerationConfig\": {{\"temperature\": {temperature}, \"bpm\": {bpm}}}}}";
+        await m_webSocket.SendText(message);
     }
 
     async void OnApplicationQuit()
     {
-        // await m_webSocket.Close();
+        await m_webSocket.Close();
     }
 
     void Update()
     {
-        // if (m_webSocket.State == WebSocketState.Connecting)
-        // {
-        //     Debug.Log("WebSocket is connecting...");
-        // }
-    }
-
-    public void PlayAudio()
-    {
-        if (!m_audioSource.isPlaying)
+        if (m_webSocket.State == WebSocketState.Connecting)
         {
-            m_audioSource.Play();
+            Debug.Log("WebSocket is connecting...");
+        }
+        else if (m_webSocket.State == WebSocketState.Open)
+        {
+            m_webSocket.DispatchMessageQueue();
         }
     }
 
-    public void StopAudio()
+    public async void Play()
     {
-        if (m_audioSource.isPlaying)
-        {
-            m_audioSource.Stop();
-        }
+        await m_webSocket.SendText("{\"playbackControl\": \"PLAY\"}");
     }
 
-    public void PauseAudio()
+    public async void Stop()
     {
-        if (m_audioSource.isPlaying)
-        {
-            m_audioSource.Pause();
-        }
+        await m_webSocket.SendText("{\"playbackControl\": \"STOP\"}");
+    }
+
+    public async void Pause()
+    {
+        await m_webSocket.SendText("{\"playbackControl\": \"PAUSE\"}");
     }
 
     void GetAudio()
