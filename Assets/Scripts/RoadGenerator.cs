@@ -95,14 +95,22 @@ public struct BezierCurve
 public static class RoadGenerator
 {
     const int ControlPointCapacity = 20;
+    public const int LandCol = 6;
     public static float baseSegmentLength = 100f;
-    public static int samplesPerSegment = 100;
+    public static Vector2 landSpacing = new Vector2(10, 20);
 
     static ControlPoint[] s_controlPoints = InitializeControlPoints();
     static int s_controlPointsHead = 0;
     static int s_controlPointsSize = 1;
     static BezierCurve[] s_curves = new BezierCurve[ControlPointCapacity]; // curve i -> controlPoints[i] - > controlPoints[i + 1]
+    static BezierCurve[,] s_landCurves = new BezierCurve[LandCol, ControlPointCapacity]; // curve i -> controlPoints[i] - > controlPoints[i + 1]
     static float s_totalLength = 0;
+    static float[] s_landLength = new float[LandCol];
+
+    public static float GetLandRatio(int col)
+    {
+        return s_landLength[col] / s_totalLength;
+    }
 
     static ControlPoint[] InitializeControlPoints()
     {
@@ -118,8 +126,10 @@ public static class RoadGenerator
     {
         ControlPoint lastControlPoint = s_controlPoints[(s_controlPointsHead + s_controlPointsSize - 1) % ControlPointCapacity];
 
-        Vector3 nextPosition = lastControlPoint.position + Quaternion.Euler(UnityEngine.Random.Range(-5.0f, 5.0f), UnityEngine.Random.Range(-45.0f, 45.0f), 0) * lastControlPoint.direction * baseSegmentLength;
-        Vector3 nextDirection = Quaternion.Euler(0, UnityEngine.Random.Range(-45.0f, 45.0f), 0) * lastControlPoint.direction;
+        Vector3 nextPosition = lastControlPoint.position + Quaternion.Euler(UnityEngine.Random.Range(-3.0f, 3.0f), UnityEngine.Random.Range(-45.0f, 45.0f), 0) * lastControlPoint.direction * baseSegmentLength;
+        Vector3 nextDirection = nextPosition - lastControlPoint.position;
+        nextDirection.y = 0;
+        nextDirection = Quaternion.Euler(0, UnityEngine.Random.Range(-45.0f, 45.0f), 0) * nextDirection.normalized;
 
         // remove head
         if (s_controlPointsSize == ControlPointCapacity)
@@ -131,6 +141,24 @@ public static class RoadGenerator
         s_controlPointsSize++;
     }
 
+    static Vector3 Intersection(Vector3 A, Vector3 B, Vector3 C, Vector3 D, Vector3 v)
+    {
+        Vector3 abDir = B - A;
+        Vector3 cdDir = D - C;
+
+        Vector3 planeNormal = Vector3.Cross(cdDir, v).normalized;
+        float denominator = Vector3.Dot(planeNormal, abDir);
+
+        // parallel
+        if (Mathf.Approximately(denominator, 0f))
+        {
+            return B;
+        }
+
+        float t = Vector3.Dot(planeNormal, C - A) / denominator;
+        return A + t * abDir;
+    }
+
     static void UpdateCurves()
     {
         if (s_controlPointsSize < 2) return;
@@ -138,12 +166,33 @@ public static class RoadGenerator
         int prevIndex = (s_controlPointsHead + s_controlPointsSize - 2) % ControlPointCapacity;
         int nextIndex = (s_controlPointsHead + s_controlPointsSize - 1) % ControlPointCapacity;
         Vector3 P0 = s_controlPoints[prevIndex].position;
-        Vector3 P1 = P0 + s_controlPoints[prevIndex].direction * baseSegmentLength / 2;
+        Vector3 P1 = P0 + s_controlPoints[prevIndex].direction * baseSegmentLength / 3;
         Vector3 P3 = s_controlPoints[nextIndex].position;
-        Vector3 P2 = P3 - s_controlPoints[nextIndex].direction * baseSegmentLength / 2;
+        Vector3 P2 = P3 - s_controlPoints[nextIndex].direction * baseSegmentLength / 3;
 
         s_curves[prevIndex] = new BezierCurve(P0, P1, P2, P3);
         s_totalLength += s_curves[prevIndex].length;
+
+        Vector3 P0normal = Vector3.Cross(s_controlPoints[prevIndex].direction, Vector3.up).normalized;
+        Vector3 P12normal = Vector3.Cross(P2 - P1, Vector3.up).normalized;
+        Vector3 P3normal = Vector3.Cross(s_controlPoints[nextIndex].direction, Vector3.up).normalized;
+        for (int i = 0; i < LandCol; i++)
+        {
+            float landColOffset = i - (LandCol - 1) / 2.0f;
+            float X = landSpacing[0] * Mathf.Sign(landColOffset) + landColOffset * landSpacing[1];
+            Vector3 P0_new = P0 + P0normal * X;
+            Vector3 P3_new = P3 + P3normal * X;
+            Vector3 P1_1 = P1 + P0normal * X;
+            Vector3 P1_2 = P1 + P12normal * X;
+            Vector3 P2_1 = P2 + P12normal * X;
+            Vector3 P2_2 = P2 + P3normal * X;
+            Vector3 P1_new = Intersection(P0_new, P1_1, P1_2, P2_1, Vector3.up);
+            Vector3 P2_new = Intersection(P2_2, P3_new, P2_1, P1_2, Vector3.up);
+            P1_new = P0_new + s_controlPoints[prevIndex].direction * Vector3.Distance(P1_new, P0_new);
+            P2_new = P3_new - s_controlPoints[nextIndex].direction * Vector3.Distance(P2_new, P3_new);
+            s_landCurves[i, prevIndex] = new BezierCurve(P0_new, P1_new, P2_new, P3_new);
+            s_landLength[i] += s_landCurves[i, prevIndex].length;
+        }
     }
 
     public static Matrix4x4 GetTransform(float L)
@@ -163,6 +212,28 @@ public static class RoadGenerator
             if (nowL <= L)
             {
                 return s_curves[index].GetTransform((L - nowL) / s_curves[index].length);
+            }
+        }
+        return Matrix4x4.identity;
+    }
+
+    public static Matrix4x4 GetXTransform(float L, int landID)
+    {
+        while (L >= s_landLength[landID])
+        {
+            GenerateNextControlPoint();
+            UpdateCurves();
+        }
+
+        // search segment
+        float nowL = s_landLength[landID];
+        for (int i = s_controlPointsSize - 2; i >= 0; i--)
+        {
+            int index = (s_controlPointsHead + i) % ControlPointCapacity;
+            nowL -= s_landCurves[landID, index].length;
+            if (nowL <= L)
+            {
+                return s_landCurves[landID, index].GetTransform((L - nowL) / s_landCurves[landID, index].length);
             }
         }
         return Matrix4x4.identity;

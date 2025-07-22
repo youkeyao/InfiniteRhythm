@@ -5,7 +5,7 @@ using System.Text;
 using NativeWebSocket;
 using System.Collections.Generic;
 
-class AudioGenerator : MonoBehaviour
+class AudioManager : MonoBehaviour
 {
     public AudioClip audioClip;
 
@@ -22,37 +22,37 @@ class AudioGenerator : MonoBehaviour
 
         // StartCoroutine(SendGeminiMusicRequest("prompt"));
 
-        Dictionary<string, string> headers = new Dictionary<string, string>
-        {
-            { "Content-Type", "application/json" },
-            { "x-goog-api-key", "AIzaSyBE_WpYLV2beN9E52AUsGTjzjs82_DVT_I" },
-            { "user-agent", "google-genai-sdk/1.26.0 gl-python/3.12.0" },
-            { "x-goog-api-client", "google-genai-sdk/1.26.0 gl-python/3.12.0" }
-        };
-        Debug.Log(headers.ToString());
-        m_webSocket = new WebSocket(m_wsurl, headers);
-        m_webSocket.OnOpen += () => Debug.Log("WebSocket Opened!");
-        m_webSocket.OnError += (e) => Debug.Log("WebSocket Error: " + e);
-        m_webSocket.OnClose += (e) => Debug.Log("WebSocket Closed: " + e);
-        m_webSocket.OnMessage += (bytes) =>
-        {
-            string message = Encoding.UTF8.GetString(bytes);
-            Debug.Log("WebSocket Message: " + message);
-        };
-        await m_webSocket.Connect();
+        // Dictionary<string, string> headers = new Dictionary<string, string>
+        // {
+        //     { "Content-Type", "application/json" },
+        //     { "x-goog-api-key", "AIzaSyBE_WpYLV2beN9E52AUsGTjzjs82_DVT_I" },
+        //     { "user-agent", "google-genai-sdk/1.26.0 gl-python/3.12.0" },
+        //     { "x-goog-api-client", "google-genai-sdk/1.26.0 gl-python/3.12.0" }
+        // };
+        // Debug.Log(headers.ToString());
+        // m_webSocket = new WebSocket(m_wsurl, headers);
+        // m_webSocket.OnOpen += () => Debug.Log("WebSocket Opened!");
+        // m_webSocket.OnError += (e) => Debug.Log("WebSocket Error: " + e);
+        // m_webSocket.OnClose += (e) => Debug.Log("WebSocket Closed: " + e);
+        // m_webSocket.OnMessage += (bytes) =>
+        // {
+        //     string message = Encoding.UTF8.GetString(bytes);
+        //     Debug.Log("WebSocket Message: " + message);
+        // };
+        // await m_webSocket.Connect();
     }
 
     async void OnApplicationQuit()
     {
-        await m_webSocket.Close();
+        // await m_webSocket.Close();
     }
 
     void Update()
     {
-        if (m_webSocket.State == WebSocketState.Connecting)
-        {
-            Debug.Log("WebSocket is connecting...");
-        }
+        // if (m_webSocket.State == WebSocketState.Connecting)
+        // {
+        //     Debug.Log("WebSocket is connecting...");
+        // }
     }
 
     public void PlayAudio()

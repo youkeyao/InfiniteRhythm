@@ -10,11 +10,12 @@ public struct LandData
 }
 
 [System.Serializable]
-public struct VegetationData
+public struct ItemData
 {
+    public Vector3 scale;
     public Mesh mesh;
-    public int minCountPerLand;
-    public int maxCountPerLand;
+    public float probability;
+    public float maxY;
 }
 
 public class MapManager : MonoBehaviour
@@ -32,13 +33,15 @@ public class MapManager : MonoBehaviour
     public Mesh roadMesh;
 
     // land
-    public int landCol = 2;
     public float landOverlap = 0.1f;
-    public Vector2 landSpacing;
     public LandData[] landDatas;
 
-    // Veg
-    public VegetationData[] vegDatas;
+    // Item
+    public float baseVegNoiseScale = 0.2f;
+    public float detailVegNoiseScale = 0.8f;
+    public float baseVegNoiseThreshold = 0.6f;
+    public float detailVegNoiseThreshold = 0.4f;
+    public ItemData[] itemDatas;
 
     // private variables
     float m_roadDistance = 0;
@@ -46,7 +49,7 @@ public class MapManager : MonoBehaviour
     Queue<Matrix4x4> m_roadSpawnQueue = new Queue<Matrix4x4>();
     List<Queue<Matrix4x4>> m_landSpawnQueues = new List<Queue<Matrix4x4>>();
     List<int> m_lastLandIndex = new List<int>();
-    List<Queue<Matrix4x4>> m_vegSpawnQueues = new List<Queue<Matrix4x4>>();
+    List<Queue<Matrix4x4>> m_itemSpawnQueues = new List<Queue<Matrix4x4>>();
 
     Unity.Mathematics.Random m_random;
 
@@ -57,15 +60,15 @@ public class MapManager : MonoBehaviour
         {
             m_landSpawnQueues.Add(new Queue<Matrix4x4>());
         }
-        m_landDistances = new float[landCol];
-        for (int i = 0; i < landCol; i++)
+        m_landDistances = new float[RoadGenerator.LandCol];
+        for (int i = 0; i < RoadGenerator.LandCol; i++)
         {
             m_landDistances[i] = 0;
             m_lastLandIndex.Add(-1);
         }
-        for (int i = 0; i < vegDatas.Length; i++)
+        for (int i = 0; i < itemDatas.Length; i++)
         {
-            m_vegSpawnQueues.Add(new Queue<Matrix4x4>());
+            m_itemSpawnQueues.Add(new Queue<Matrix4x4>());
         }
     }
 
@@ -85,20 +88,20 @@ public class MapManager : MonoBehaviour
         Graphics.DrawMeshInstanced(roadMesh, 0, mapMaterial, m_roadSpawnQueue.ToArray(), m_roadSpawnQueue.Count);
         for (int i = 0; i < landDatas.Length; i++)
         {
-            while (m_landSpawnQueues[i].Count > 0 && Vector3.Dot(m_landSpawnQueues[i].Peek().GetPosition() - cameraTransform.position + cameraTransform.forward * landSpacing[1], cameraTransform.forward) < 0)
+            while (m_landSpawnQueues[i].Count > 0 && Vector3.Dot(m_landSpawnQueues[i].Peek().GetPosition() - cameraTransform.position, cameraTransform.forward) < 0)
             {
                 m_landSpawnQueues[i].Dequeue();
             }
             Graphics.DrawMeshInstanced(landDatas[i].mesh, 0, mapMaterial, m_landSpawnQueues[i].ToArray(), m_landSpawnQueues[i].Count);
         }
-        // for (int i = 0; i < vegDatas.Length; i++)
-        // {
-        //     while (m_vegSpawnQueues[i].Count > 0 && m_vegSpawnQueues[i].Peek().GetPosition().z < cameraTransform.position.z)
-        //     {
-        //         m_vegSpawnQueues[i].Dequeue();
-        //     }
-        //     Graphics.DrawMeshInstanced(vegDatas[i].mesh, 0, mapMaterial, m_vegSpawnQueues[i].ToArray(), m_vegSpawnQueues[i].Count);
-        // }
+        for (int i = 0; i < itemDatas.Length; i++)
+        {
+            while (m_itemSpawnQueues[i].Count > 0 && Vector3.Dot(m_itemSpawnQueues[i].Peek().GetPosition() - cameraTransform.position, cameraTransform.forward) < 0)
+            {
+                m_itemSpawnQueues[i].Dequeue();
+            }
+            Graphics.DrawMeshInstanced(itemDatas[i].mesh, 0, mapMaterial, m_itemSpawnQueues[i].ToArray(), m_itemSpawnQueues[i].Count);
+        }
     }
 
     void GenerateRoad()
@@ -120,60 +123,76 @@ public class MapManager : MonoBehaviour
     void GenerateLand()
     {
         float currentTime = Time.time - levelManager.startTime;
-        int minIndex = 0;
-        for (int i = 1; i < landCol; i++)
+        int landIndex = 0;
+        for (int i = 1; i < RoadGenerator.LandCol; i++)
         {
-            if (m_landDistances[i] < m_landDistances[minIndex])
+            if (m_landDistances[i] / RoadGenerator.GetLandRatio(i) < m_landDistances[landIndex] / RoadGenerator.GetLandRatio(landIndex))
             {
-                minIndex = i;
+                landIndex = i;
             }
         }
-        while (m_landDistances[minIndex] < currentTime * levelManager.speed + showDistance)
+        while (m_landDistances[landIndex] < RoadGenerator.GetLandRatio(landIndex) * currentTime * levelManager.speed + showDistance)
         {
-            int landIndex = m_random.NextInt(0, landDatas.Length);
-
+            int landMeshIndex = m_random.NextInt(0, landDatas.Length);
             // avoid continuous land
-            while (landIndex == m_lastLandIndex[minIndex])
+            while (landMeshIndex == m_lastLandIndex[landIndex])
             {
-                landIndex = m_random.NextInt(0, landDatas.Length);
+                landMeshIndex = m_random.NextInt(0, landDatas.Length);
             }
-            m_lastLandIndex[minIndex] = landIndex;
-            float landColOffset = minIndex - (landCol - 1) / 2.0f;
-            float X = landSpacing[0] * Mathf.Sign(landColOffset) + landColOffset * landSpacing[1];
-            Vector3 meshBoundSize = landDatas[landIndex].mesh.bounds.size;
-            Vector3 landSize = new Vector3(meshBoundSize.x * landDatas[landIndex].scale.x, meshBoundSize.y * landDatas[landIndex].scale.y, meshBoundSize.z * landDatas[landIndex].scale.z);
-            Matrix4x4 landTransform = RoadGenerator.GetTransform(m_landDistances[minIndex]) * Matrix4x4.TRS(new Vector3(X, 0, 0), Quaternion.identity, landDatas[landIndex].scale);
-            m_landSpawnQueues[landIndex].Enqueue(landTransform);
-            m_landDistances[minIndex] += (1 - landOverlap) * landSize.z;
+            m_lastLandIndex[landIndex] = landMeshIndex;
 
-            // generate vegetation
-            GenerateVegetation(landTransform, landSize, landDatas[landIndex].heightMap);
-            for (int i = 0; i < landCol; i++)
+            Vector3 meshBoundSize = landDatas[landMeshIndex].mesh.bounds.size;
+            Vector3 landSize = new Vector3(meshBoundSize.x * landDatas[landMeshIndex].scale.x, meshBoundSize.y * landDatas[landMeshIndex].scale.y, meshBoundSize.z * landDatas[landMeshIndex].scale.z);
+            Matrix4x4 landTransform = RoadGenerator.GetXTransform(m_landDistances[landIndex], landIndex) * Matrix4x4.TRS(new Vector3(0, 0, 0), Quaternion.identity, landDatas[landMeshIndex].scale);
+            m_landSpawnQueues[landMeshIndex].Enqueue(landTransform);
+            m_landDistances[landIndex] += (1 - landOverlap) * landSize.z;
+
+            // generate items
+            GenerateItems(landTransform, landSize, landDatas[landMeshIndex].heightMap);
+            for (int i = 0; i < RoadGenerator.LandCol; i++)
             {
-                if (m_landDistances[i] < m_landDistances[minIndex])
+                if (m_landDistances[i] < m_landDistances[landIndex])
                 {
-                    minIndex = i;
+                    landIndex = i;
                 }
             }
         }
     }
 
-    void GenerateVegetation(Matrix4x4 landTransform, Vector3 landSize, Texture2D heightMap)
+    void GenerateItems(Matrix4x4 landTransform, Vector3 landSize, Texture2D heightMap)
     {
         Vector3 landPos = landTransform.GetPosition();
-        for (int i = 0; i < vegDatas.Length; i++)
+        Quaternion landRotation = landTransform.rotation;
+        Matrix4x4 unscaledLandTransform = Matrix4x4.TRS(landPos, landRotation, Vector3.one);
+        for (int i = 0; i < itemDatas.Length; i++)
         {
-            int vegCount = m_random.NextInt(vegDatas[i].minCountPerLand, vegDatas[i].maxCountPerLand);
-            for (int j = 0; j < vegCount; j++)
+            float itemSize = itemDatas[i].mesh.bounds.size.x * itemDatas[i].scale.x;
+            float padding = itemSize / landSize.x;
+            padding = Mathf.Min(padding, 0.5f);
+            while (m_random.NextFloat(0, 1) < itemDatas[i].probability)
             {
-                float u = m_random.NextFloat(landOverlap, 1 - landOverlap);
-                float v = m_random.NextFloat(landOverlap, 1 - landOverlap);
-                float X = u * landSize.x + landPos.x - landSize.x / 2;
-                float Z = v * landSize.z + landPos.z - landSize.z / 2;
-                float Y = heightMap.GetPixelBilinear(u, v).r * landSize.y;
+                float u = m_random.NextFloat(padding, 1 - padding);
+                float v = m_random.NextFloat(padding, 1 - padding);
+                float X = u * landSize.x - landSize.x / 2;
+                float Z = v * landSize.z - landSize.z / 2;
+                float Y = Mathf.Min(heightMap.GetPixelBilinear(u, v).r * landSize.y, itemDatas[i].maxY);
                 Vector3 pos = new Vector3(X, Y, Z);
                 Quaternion rotation = Quaternion.Euler(0, m_random.NextFloat(0, 360), 0);
-                m_vegSpawnQueues[i].Enqueue(Matrix4x4.TRS(pos, rotation, Vector3.one));
+                Matrix4x4 itemTransform = unscaledLandTransform * Matrix4x4.TRS(pos, rotation, itemDatas[i].scale);
+                Vector3 itemPos = itemTransform.GetPosition();
+                float baseNoise = Mathf.PerlinNoise(
+                    itemPos.x * baseVegNoiseScale + i * 100,
+                    itemPos.z * baseVegNoiseScale + i * 100
+                );
+                if (baseNoise < baseVegNoiseThreshold)
+                    continue;
+                float detailNoise = Mathf.PerlinNoise(
+                    itemPos.x * detailVegNoiseScale + i * 100,
+                    itemPos.z * detailVegNoiseScale + i * 100
+                );
+                if (detailNoise > detailVegNoiseThreshold)
+                    continue;
+                m_itemSpawnQueues[i].Enqueue(itemTransform);
             }
         }
     }
