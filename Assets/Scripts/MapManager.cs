@@ -143,7 +143,7 @@ public class MapManager : MonoBehaviour
 
             Vector3 meshBoundSize = landDatas[landMeshIndex].mesh.bounds.size;
             Vector3 landSize = new Vector3(meshBoundSize.x * landDatas[landMeshIndex].scale.x, meshBoundSize.y * landDatas[landMeshIndex].scale.y, meshBoundSize.z * landDatas[landMeshIndex].scale.z);
-            Matrix4x4 landTransform = RoadGenerator.GetXTransform(m_landDistances[landIndex], landIndex) * Matrix4x4.TRS(new Vector3(0, 0, 0), Quaternion.identity, landDatas[landMeshIndex].scale);
+            Matrix4x4 landTransform = RoadGenerator.GetXTransform(m_landDistances[landIndex], landIndex) * Matrix4x4.Scale(landDatas[landMeshIndex].scale);
             m_landSpawnQueues[landMeshIndex].Enqueue(landTransform);
             m_landDistances[landIndex] += (1 - landOverlap) * landSize.z;
 

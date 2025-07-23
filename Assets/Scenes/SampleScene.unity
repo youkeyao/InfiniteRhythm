@@ -2038,7 +2038,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6298ea23c667e03488b123ebbbf22194, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  audioClip: {fileID: 0}
+  levelManager: {fileID: 1865306863}
+  bufferSize: 5
 --- !u!114 &1865306866
 MonoBehaviour:
   m_ObjectHideFlags: 0

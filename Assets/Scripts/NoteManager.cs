@@ -4,6 +4,7 @@ using UnityEngine;
 public class NoteManager : MonoBehaviour
 {
     public LevelManager levelManager;
+    public AudioManager audioManager;
     public Vector3 noteScale = new Vector3(1, 0.3f, 1);
     public Mesh noteMesh;
     public Material noteMaterial;
@@ -17,24 +18,16 @@ public class NoteManager : MonoBehaviour
         KeyCode.L,
     };
 
-    List<Note> m_chart;
     List<float> m_spawnTime = new List<float>();
     List<Matrix4x4> m_spawnList = new List<Matrix4x4>();
-    int m_noteIndex = 0;
     float m_trackThreshold = 0.1f;
-
-    public void Play(List<Note> chart)
-    {
-        m_chart = chart;
-        m_noteIndex = 0;
-    }
 
     public void Update()
     {
         if (levelManager.isPlaying)
         {
             float currentTime = Time.time - levelManager.startTime;
-            float spacing = -transform.position.x * 2 / (keyCodes.Length - 1);
+            float spacing = -transform.position.x * 2 / (audioManager.numTracks - 1);
 
             // Dispose
             while (m_spawnTime.Count > 0 && m_spawnTime[0] < currentTime - 1)
@@ -44,13 +37,14 @@ public class NoteManager : MonoBehaviour
             }
 
             // Spawn
-            while (m_noteIndex < m_chart.Count && currentTime >= m_chart[m_noteIndex].time - showDistance / levelManager.speed)
+            Queue<Note> chart = audioManager.GetChart();
+            while (chart.Count > 0 && currentTime >= chart.Peek().time - showDistance / levelManager.speed)
             {
-                Vector3 offset = new Vector3(m_chart[m_noteIndex].track * spacing, 0, 0);
-                Matrix4x4 spawnTransform = RoadGenerator.GetTransform(m_chart[m_noteIndex].time * levelManager.speed);
+                Note note = chart.Dequeue();
+                Vector3 offset = new Vector3(note.track * spacing, 0, 0);
+                Matrix4x4 spawnTransform = RoadGenerator.GetTransform(note.time * levelManager.speed);
                 m_spawnList.Add(spawnTransform * Matrix4x4.Translate(offset) * transform.localToWorldMatrix * Matrix4x4.Scale(noteScale));
-                m_spawnTime.Add(m_chart[m_noteIndex].time);
-                m_noteIndex++;
+                m_spawnTime.Add(note.time);
             }
 
             // Hit

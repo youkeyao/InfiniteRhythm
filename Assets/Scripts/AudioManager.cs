@@ -1,26 +1,36 @@
 using UnityEngine;
-using UnityEngine.Networking;
-using System.Collections;
 using System.Text;
 using NativeWebSocket;
 using System.Collections.Generic;
-using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
+using System.IO;
+using System;
 
-class AudioManager : MonoBehaviour
+public class AudioManager : MonoBehaviour
 {
-    private AudioSource m_audioSource;
-    private List<AudioClip> m_audioClips = new List<AudioClip>();
-    private string m_wsurl = "wss://generativelanguage.googleapis.com//ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateMusic?key=AIzaSyBE_WpYLV2beN9E52AUsGTjzjs82_DVT_I";
-    private WebSocket m_webSocket;
+    public LevelManager levelManager;
+    public int bufferSize = 5;
+    public int sampleRate = 48000;
+    public int numChannels = 2;
+    public int bitsPerSample = 16;
+    public int numTracks = 4;
+
+    Dictionary<string, float> m_weightedPrompts = new Dictionary<string, float>();
+    float m_temperature = 1.0f;
+    int m_bpm = 90;
+
+    AudioSource m_audioSource;
+    Queue<AudioClip> m_audioClips = new Queue<AudioClip>();
+    Queue<Note> m_chart = new Queue<Note>();
+    string m_wsurl = "wss://generativelanguage.googleapis.com//ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateMusic?key=AIzaSyBE_WpYLV2beN9E52AUsGTjzjs82_DVT_I";
+    WebSocket m_webSocket;
+    float m_audioLength;
+    bool m_isSetup = false;
+    bool m_isGenerating = false;
 
     async void Start()
     {
-        m_audioSource = gameObject.AddComponent<AudioSource>();
-        // m_audioSource.clip = audioClip;
-        // m_audioSource.loop = true;
-        // m_audioSource.Play();
-
-        // StartCoroutine(SendGeminiMusicRequest("prompt"));
+        m_audioSource = this.gameObject.AddComponent<AudioSource>();
 
         Dictionary<string, string> headers = new Dictionary<string, string>
         {
@@ -34,16 +44,18 @@ class AudioManager : MonoBehaviour
         {
             Debug.Log("WebSocket Opened!");
             Setup();
-            SetWeightedPrompts("minimal techno", 1.0f);
-            SetMusicGenerationConfig(1.0f, 90);
-            Play();
         };
         m_webSocket.OnError += (e) => Debug.Log("WebSocket Error: " + e);
         m_webSocket.OnClose += (e) => Debug.Log("WebSocket Closed: " + e);
         m_webSocket.OnMessage += (bytes) =>
         {
-            string message = Encoding.UTF8.GetString(bytes);
-            Debug.Log("WebSocket Message: " + message);
+            string jsonString = Encoding.UTF8.GetString(bytes);
+            JObject jObject = JObject.Parse(jsonString);
+            if (jObject["serverContent"] != null)
+            {
+                JToken dataToken = jObject["serverContent"]["audioChunks"][0]["data"];
+                ReceiveAudio(Convert.FromBase64String(dataToken.ToString()));
+            }
         };
         await m_webSocket.Connect();
     }
@@ -51,23 +63,77 @@ class AudioManager : MonoBehaviour
     async void Setup()
     {
         await m_webSocket.SendText("{\"setup\": {\"model\": \"models/lyria-realtime-exp\"}}");
+        SetWeightedPrompts("synthwave", 1.0f);
+        SetMusicGenerationConfig(m_temperature, m_bpm);
+        m_isSetup = true;
     }
 
-    async void SetWeightedPrompts(string prompt, float weight)
+    private async void SendWeightedPrompts()
     {
-        string message = $"{{\"clientContent\": {{\"weightedPrompts\": [{{\"text\": \"{prompt}\", \"weight\": {weight}}}]}}}}";
+        string message = $"{{\"clientContent\": {{\"weightedPrompts\": [";
+        foreach (string prompt in m_weightedPrompts.Keys)
+        {
+            message += $"{{\"text\": \"{prompt}\", \"weight\": {m_weightedPrompts[prompt]}}},";
+        }
+        message = message.Substring(0, message.Length - 1);
+        message += "]}}";
         await m_webSocket.SendText(message);
     }
 
-    async void SetMusicGenerationConfig(float temperature, int bpm)
+    public Queue<Note> GetChart()
+    {
+        return m_chart;
+    }
+
+    public void SetWeightedPrompts(string prompt, float weight)
+    {
+        m_weightedPrompts[prompt] = weight;
+        SendWeightedPrompts();
+    }
+
+    public void RemoveWeightedPrompts(string prompt)
+    {
+        m_weightedPrompts.Remove(prompt);
+        SendWeightedPrompts();
+    }
+
+    public async void SetMusicGenerationConfig(float temperature, int bpm)
     {
         string message = $"{{\"musicGenerationConfig\": {{\"temperature\": {temperature}, \"bpm\": {bpm}}}}}";
         await m_webSocket.SendText(message);
     }
 
-    async void OnApplicationQuit()
+    async void OnDestroy()
     {
         await m_webSocket.Close();
+    }
+
+    // pcm
+    void ReceiveAudio(byte[] bytes)
+    {
+        int sampleCount = bytes.Length / (numChannels * (bitsPerSample / 8));
+        AudioClip audioClip = AudioClip.Create("GeneratedAudioClip", sampleCount, numChannels, sampleRate, false);
+        float[] samples = new float[sampleCount * numChannels];
+        int bytesPerSample = bitsPerSample / 8;
+        for (int i = 0; i < sampleCount; i++)
+        {
+            for (int channel = 0; channel < numChannels; channel++)
+            {
+                int index = (i * numChannels + channel) * bytesPerSample;
+
+                short sample = System.BitConverter.ToInt16(bytes, index);
+                samples[i * numChannels + channel] = sample / 32768f; // normalize
+            }
+        }
+        audioClip.SetData(samples, 0);
+
+        List<Note> chart = ChartGenerator.GetChart(samples, sampleRate, m_audioLength, numTracks);
+        foreach (Note note in chart)
+        {
+            m_chart.Enqueue(note);
+        }
+        m_audioLength += audioClip.length;
+        m_audioClips.Enqueue(audioClip);
     }
 
     void Update()
@@ -76,84 +142,64 @@ class AudioManager : MonoBehaviour
         {
             Debug.Log("WebSocket is connecting...");
         }
-        else if (m_webSocket.State == WebSocketState.Open)
+        else if (m_webSocket.State == WebSocketState.Open && m_isSetup)
         {
             m_webSocket.DispatchMessageQueue();
+
+            if (levelManager.isPlaying && !m_audioSource.isPlaying)
+            {
+                // unpause
+                if (!m_audioSource.isPlaying)
+                    m_audioSource.UnPause();
+                // finished, play next clip
+                if ((m_audioSource.clip == null || !m_audioSource.isPlaying) && m_audioClips.Count > 0)
+                {
+                    m_audioSource.clip = m_audioClips.Dequeue();
+                    m_audioSource.Play();
+                }
+            }
+            else if (!levelManager.isPlaying && m_audioSource.isPlaying)
+            {
+                // pause
+                m_audioSource.Pause();
+            }
+
+            // Control generation speed
+            if (m_audioClips.Count > bufferSize)
+            {
+                Pause();
+            }
+            else if (m_audioClips.Count < bufferSize)
+            {
+                Play();
+            }
         }
     }
 
-    public async void Play()
+    async void Play()
     {
-        await m_webSocket.SendText("{\"playbackControl\": \"PLAY\"}");
+        if (!m_isGenerating)
+        {
+            m_isGenerating = true;
+            await m_webSocket.SendText("{\"playbackControl\": \"PLAY\"}");
+        }
     }
 
-    public async void Stop()
+    async void Stop()
     {
-        await m_webSocket.SendText("{\"playbackControl\": \"STOP\"}");
+        if (m_isGenerating)
+        {
+            m_isGenerating = false;
+            await m_webSocket.SendText("{\"playbackControl\": \"STOP\"}");
+        }
     }
 
-    public async void Pause()
+    async void Pause()
     {
-        await m_webSocket.SendText("{\"playbackControl\": \"PAUSE\"}");
+        if (m_isGenerating)
+        {
+            m_isGenerating = false;
+            await m_webSocket.SendText("{\"playbackControl\": \"PAUSE\"}");
+        }
     }
-
-    void GetAudio()
-    {
-
-    }
-
-    // IEnumerator SendGeminiMusicRequest(string prompt)
-    // {
-    //     string url = "https://generativelanguage.googleapis.com/v1alpha/models/lyria-realtime-exp:generateContent";
-
-    //     string json = JsonUtility.ToJson(new GeminiRequest
-    //     {
-    //         contents = new Content[]
-    //         {
-    //             new Content { role = "user", parts = new Part[] { new Part { text = prompt } } }
-    //         }
-    //     });
-
-    //     byte[] bodyRaw = Encoding.UTF8.GetBytes(json);
-
-    //     UnityWebRequest request = new UnityWebRequest(url, "POST");
-    //     request.uploadHandler = new UploadHandlerRaw(bodyRaw);
-    //     request.downloadHandler = new DownloadHandlerBuffer();
-    //     request.SetRequestHeader("x-goog-api-key", m_apiKey);
-    //     request.SetRequestHeader("Content-Type", "application/json");
-
-    //     Debug.Log("Sending request to Gemini API: " + json);
-    //     yield return request.SendWebRequest();
-
-    //     if (request.result == UnityWebRequest.Result.Success)
-    //     {
-    //         Debug.Log("Music generated: " + request.downloadHandler.text);
-
-    //         // Optional: Parse and decode music here
-    //         // TODO: Parse base64 audio and play it
-    //     }
-    //     else
-    //     {
-    //         Debug.LogError("Error: " + request.error + "\n" + request.downloadHandler.text);
-    //     }
-    // }
-}
-
-[System.Serializable]
-public class GeminiRequest
-{
-    public Content[] contents;
-}
-
-[System.Serializable]
-public class Content
-{
-    public string role;
-    public Part[] parts;
-}
-
-[System.Serializable]
-public class Part
-{
-    public string text;
 }
