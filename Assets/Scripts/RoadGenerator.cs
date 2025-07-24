@@ -106,6 +106,7 @@ public static class RoadGenerator
     static BezierCurve[,] s_landCurves = new BezierCurve[LandCol, ControlPointCapacity]; // curve i -> controlPoints[i] - > controlPoints[i + 1]
     static float s_totalLength = 0;
     static float[] s_landLength = new float[LandCol];
+    static float s_lengthEpisilon = 1e-4f;
 
     public static float GetLandRatio(int col)
     {
@@ -209,9 +210,10 @@ public static class RoadGenerator
         {
             int index = (s_controlPointsHead + i) % ControlPointCapacity;
             nowL -= s_curves[index].length;
-            if (nowL <= L)
+            if (nowL <= L || nowL < s_lengthEpisilon)
             {
-                return s_curves[index].GetTransform((L - nowL) / s_curves[index].length);
+                float s = (L - nowL) / s_curves[index].length;
+                return s_curves[index].GetTransform(s);
             }
         }
         return Matrix4x4.identity;
@@ -231,11 +233,13 @@ public static class RoadGenerator
         {
             int index = (s_controlPointsHead + i) % ControlPointCapacity;
             nowL -= s_landCurves[landID, index].length;
-            if (nowL <= L)
+            if (nowL <= L || nowL < s_lengthEpisilon)
             {
-                return s_landCurves[landID, index].GetTransform((L - nowL) / s_landCurves[landID, index].length);
+                float s = (L - nowL) / s_landCurves[landID, index].length;
+                return s_landCurves[landID, index].GetTransform(s);
             }
         }
+        Debug.Log(nowL);
         return Matrix4x4.identity;
     }
 }

@@ -1,4 +1,4 @@
-Shader "Unlit/HeightMap"
+Shader "Custom/HeightMap"
 {
     Properties
     {

@@ -12,7 +12,7 @@ public class RenderHeightMap : MonoBehaviour
     {
         GameObject go = new GameObject("Mesh");
         go.AddComponent<MeshFilter>().sharedMesh = mesh;
-        go.AddComponent<MeshRenderer>().sharedMaterial = new Material(Shader.Find("Unlit/HeightMap"));
+        go.AddComponent<MeshRenderer>().sharedMaterial = new Material(Shader.Find("Custom/HeightMap"));
         Camera.main.orthographicSize = mesh.bounds.size.x / 2;
         Shader.SetGlobalFloat("_HeightScale", mesh.bounds.size.y);
     }

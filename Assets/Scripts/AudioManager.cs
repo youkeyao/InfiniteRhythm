@@ -3,16 +3,16 @@ using System.Text;
 using NativeWebSocket;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
-using System.IO;
 using System;
 
 public class AudioManager : MonoBehaviour
 {
+    const int NumSpectrumSample = 64;
+
     public LevelManager levelManager;
     public int bufferSize = 5;
     public int sampleRate = 48000;
     public int numChannels = 2;
-    public int bitsPerSample = 16;
     public int numTracks = 4;
 
     Dictionary<string, float> m_weightedPrompts = new Dictionary<string, float>();
@@ -27,6 +27,7 @@ public class AudioManager : MonoBehaviour
     float m_audioLength;
     bool m_isSetup = false;
     bool m_isGenerating = false;
+    float[] m_spectrum = new float[NumSpectrumSample];
 
     async void Start()
     {
@@ -63,7 +64,15 @@ public class AudioManager : MonoBehaviour
     async void Setup()
     {
         await m_webSocket.SendText("{\"setup\": {\"model\": \"models/lyria-realtime-exp\"}}");
-        SetWeightedPrompts("synthwave", 1.0f);
+        // SetWeightedPrompts("synthwave", 1.0f);
+        SetWeightedPrompts("chillwave", 1.0f);
+        // SetWeightedPrompts("Bossa Nova", 1.0f);
+        // SetWeightedPrompts("Drum and Bass", 0.8f);
+        // SetWeightedPrompts("Post Punk", 1.0f);
+        // SetWeightedPrompts("Shoegaze", 0.5f);
+        // SetWeightedPrompts("Funk", 1.0f);
+        // SetWeightedPrompts("Chiptune", 1.0f);
+        // SetWeightedPrompts("Lush Strings", 1.0f);
         SetMusicGenerationConfig(m_temperature, m_bpm);
         m_isSetup = true;
     }
@@ -83,6 +92,11 @@ public class AudioManager : MonoBehaviour
     public Queue<Note> GetChart()
     {
         return m_chart;
+    }
+
+    public float[] GetSpectrumData()
+    {
+        return m_spectrum;
     }
 
     public void SetWeightedPrompts(string prompt, float weight)
@@ -111,10 +125,10 @@ public class AudioManager : MonoBehaviour
     // pcm
     void ReceiveAudio(byte[] bytes)
     {
-        int sampleCount = bytes.Length / (numChannels * (bitsPerSample / 8));
+        int bytesPerSample = 2;
+        int sampleCount = bytes.Length / (numChannels * bytesPerSample);
         AudioClip audioClip = AudioClip.Create("GeneratedAudioClip", sampleCount, numChannels, sampleRate, false);
         float[] samples = new float[sampleCount * numChannels];
-        int bytesPerSample = bitsPerSample / 8;
         for (int i = 0; i < sampleCount; i++)
         {
             for (int channel = 0; channel < numChannels; channel++)
@@ -138,11 +152,7 @@ public class AudioManager : MonoBehaviour
 
     void Update()
     {
-        if (m_webSocket.State == WebSocketState.Connecting)
-        {
-            Debug.Log("WebSocket is connecting...");
-        }
-        else if (m_webSocket.State == WebSocketState.Open && m_isSetup)
+        if (m_webSocket.State == WebSocketState.Open && m_isSetup)
         {
             m_webSocket.DispatchMessageQueue();
 
@@ -173,6 +183,8 @@ public class AudioManager : MonoBehaviour
             {
                 Play();
             }
+
+            m_audioSource.GetSpectrumData(m_spectrum, 0, FFTWindow.BlackmanHarris);
         }
     }
 

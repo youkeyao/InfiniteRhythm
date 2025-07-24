@@ -6,6 +6,7 @@ public struct LandData
 {
     public Vector3 scale;
     public Mesh mesh;
+    public Material material;
     public Texture2D heightMap;
 }
 
@@ -14,6 +15,7 @@ public struct ItemData
 {
     public Vector3 scale;
     public Mesh mesh;
+    public Material material;
     public float probability;
     public float maxY;
 }
@@ -24,13 +26,13 @@ public class MapManager : MonoBehaviour
 
     public float showDistance = 200.0f;
     public Transform cameraTransform;
-    public Material mapMaterial;
 
     // road
     public float roadSpacing;
     public Vector3 roadRotation;
     public Vector3 roadScale = Vector3.one;
     public Mesh roadMesh;
+    public Material roadMaterial;
 
     // land
     public float landOverlap = 0.1f;
@@ -85,14 +87,14 @@ public class MapManager : MonoBehaviour
         {
             m_roadSpawnQueue.Dequeue();
         }
-        Graphics.DrawMeshInstanced(roadMesh, 0, mapMaterial, m_roadSpawnQueue.ToArray(), m_roadSpawnQueue.Count);
+        Graphics.DrawMeshInstanced(roadMesh, 0, roadMaterial, m_roadSpawnQueue.ToArray(), m_roadSpawnQueue.Count);
         for (int i = 0; i < landDatas.Length; i++)
         {
             while (m_landSpawnQueues[i].Count > 0 && Vector3.Dot(m_landSpawnQueues[i].Peek().GetPosition() - cameraTransform.position, cameraTransform.forward) < 0)
             {
                 m_landSpawnQueues[i].Dequeue();
             }
-            Graphics.DrawMeshInstanced(landDatas[i].mesh, 0, mapMaterial, m_landSpawnQueues[i].ToArray(), m_landSpawnQueues[i].Count);
+            Graphics.DrawMeshInstanced(landDatas[i].mesh, 0, landDatas[i].material, m_landSpawnQueues[i].ToArray(), m_landSpawnQueues[i].Count);
         }
         for (int i = 0; i < itemDatas.Length; i++)
         {
@@ -100,7 +102,7 @@ public class MapManager : MonoBehaviour
             {
                 m_itemSpawnQueues[i].Dequeue();
             }
-            Graphics.DrawMeshInstanced(itemDatas[i].mesh, 0, mapMaterial, m_itemSpawnQueues[i].ToArray(), m_itemSpawnQueues[i].Count);
+            Graphics.DrawMeshInstanced(itemDatas[i].mesh, 0, itemDatas[i].material, m_itemSpawnQueues[i].ToArray(), m_itemSpawnQueues[i].Count);
         }
     }
 

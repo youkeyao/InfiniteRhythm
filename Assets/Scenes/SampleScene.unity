@@ -890,11 +890,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   levelManager: {fileID: 1865306863}
+  audioManager: {fileID: 1865306865}
   noteScale: {x: 1, y: 0.3, z: 1}
   noteMesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
   noteMaterial: {fileID: 2100000, guid: 4c337ed197e463c40ae6422fbbbf5258, type: 2}
   hitThreshold: 1.5
-  showDistance: 50
+  showDistance: 200
   keyCodes: 61000000640000006a0000006c000000
 --- !u!4 &527870824
 Transform:
@@ -920,6 +921,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 7208770312383436556, guid: 2554008d6447a2540b44e55f0c0b576e, type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: 7accf27719c7b034b94f8669f19c4aaf, type: 2}
     - target: {fileID: 8377151309574368355, guid: 2554008d6447a2540b44e55f0c0b576e, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -1402,6 +1407,7 @@ GameObject:
   - component: {fileID: 963194227}
   - component: {fileID: 963194226}
   - component: {fileID: 963194229}
+  - component: {fileID: 963194230}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -1500,6 +1506,50 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   levelManager: {fileID: 1865306863}
+--- !u!114 &963194230
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 963194225}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a79441f348de89743a2939f4d699eac1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_RenderShadows: 1
+  m_RequiresDepthTextureOption: 2
+  m_RequiresOpaqueTextureOption: 2
+  m_CameraType: 0
+  m_Cameras: []
+  m_RendererIndex: -1
+  m_VolumeLayerMask:
+    serializedVersion: 2
+    m_Bits: 1
+  m_VolumeTrigger: {fileID: 0}
+  m_VolumeFrameworkUpdateModeOption: 2
+  m_RenderPostProcessing: 0
+  m_Antialiasing: 0
+  m_AntialiasingQuality: 2
+  m_StopNaN: 0
+  m_Dithering: 0
+  m_ClearDepth: 1
+  m_AllowXRRendering: 1
+  m_AllowHDROutput: 1
+  m_UseScreenCoordOverride: 0
+  m_ScreenSizeOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_ScreenCoordScaleBias: {x: 0, y: 0, z: 0, w: 0}
+  m_RequiresDepthTexture: 0
+  m_RequiresColorTexture: 0
+  m_Version: 2
+  m_TaaSettings:
+    m_Quality: 3
+    m_FrameInfluence: 0.1
+    m_JitterScale: 1
+    m_MipBias: 0
+    m_VarianceClampScale: 0.9
+    m_ContrastAdaptiveSharpening: 0
 --- !u!1001 &1091798482
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1634,6 +1684,7 @@ GameObject:
   - component: {fileID: 1329848778}
   - component: {fileID: 1329848777}
   - component: {fileID: 1329848780}
+  - component: {fileID: 1329848781}
   m_Layer: 0
   m_Name: HeightCamera
   m_TagString: MainCamera
@@ -1727,9 +1778,53 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a7b4a3d2a9ca86c4a8cd1ce46711160f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mesh: {fileID: 672551834481701363, guid: 08eefc2f613faa34fbb717ac2142af0a, type: 3}
+  mesh: {fileID: 6043185480894707810, guid: 38b178f6a1ea19f4baf761918779b712, type: 3}
   savePath: Assets/heightmap.png
   textureSize: 1024
+--- !u!114 &1329848781
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1329848776}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a79441f348de89743a2939f4d699eac1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_RenderShadows: 1
+  m_RequiresDepthTextureOption: 2
+  m_RequiresOpaqueTextureOption: 2
+  m_CameraType: 0
+  m_Cameras: []
+  m_RendererIndex: -1
+  m_VolumeLayerMask:
+    serializedVersion: 2
+    m_Bits: 1
+  m_VolumeTrigger: {fileID: 0}
+  m_VolumeFrameworkUpdateModeOption: 2
+  m_RenderPostProcessing: 0
+  m_Antialiasing: 0
+  m_AntialiasingQuality: 2
+  m_StopNaN: 0
+  m_Dithering: 0
+  m_ClearDepth: 1
+  m_AllowXRRendering: 1
+  m_AllowHDROutput: 1
+  m_UseScreenCoordOverride: 0
+  m_ScreenSizeOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_ScreenCoordScaleBias: {x: 0, y: 0, z: 0, w: 0}
+  m_RequiresDepthTexture: 0
+  m_RequiresColorTexture: 0
+  m_Version: 2
+  m_TaaSettings:
+    m_Quality: 3
+    m_FrameInfluence: 0.1
+    m_JitterScale: 1
+    m_MipBias: 0
+    m_VarianceClampScale: 0.9
+    m_ContrastAdaptiveSharpening: 0
 --- !u!1001 &1350143802
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1985,6 +2080,7 @@ GameObject:
   - component: {fileID: 1865306863}
   - component: {fileID: 1865306866}
   - component: {fileID: 1865306865}
+  - component: {fileID: 1865306867}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -2005,9 +2101,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   speed: 15
-  prefab: {fileID: 9154215057541871321, guid: 2554008d6447a2540b44e55f0c0b576e, type: 3}
-  noteManager: {fileID: 527870823}
-  cameraMover: {fileID: 963194229}
   playButton: {fileID: 737880857}
   isPlaying: 0
   startTime: 0
@@ -2040,6 +2133,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   levelManager: {fileID: 1865306863}
   bufferSize: 5
+  sampleRate: 48000
+  numChannels: 2
+  numTracks: 4
 --- !u!114 &1865306866
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2053,23 +2149,26 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   levelManager: {fileID: 1865306863}
-  showDistance: 200
+  showDistance: 400
   cameraTransform: {fileID: 963194228}
-  mapMaterial: {fileID: 2100000, guid: 0799a1e95665ef14f8fe2cbcd4ba3dc4, type: 2}
   roadSpacing: 15
   roadRotation: {x: 0, y: 90, z: 0}
   roadScale: {x: 1, y: 1, z: 1}
   roadMesh: {fileID: 2298263045900952535, guid: 324d33f3ad1481c4e8ba55d696fe64d9, type: 3}
+  roadMaterial: {fileID: 2100000, guid: 0799a1e95665ef14f8fe2cbcd4ba3dc4, type: 2}
   landOverlap: 0.2
   landDatas:
   - scale: {x: 1, y: 1, z: 1}
     mesh: {fileID: 5355927448623902033, guid: 5d113e0df0acd474cb544e13e9327875, type: 3}
+    material: {fileID: 2100000, guid: 0799a1e95665ef14f8fe2cbcd4ba3dc4, type: 2}
     heightMap: {fileID: 2800000, guid: 508512af836115e4d964082f8e9df00d, type: 3}
   - scale: {x: 1, y: 1, z: 1}
     mesh: {fileID: 672551834481701363, guid: 08eefc2f613faa34fbb717ac2142af0a, type: 3}
+    material: {fileID: 2100000, guid: 0799a1e95665ef14f8fe2cbcd4ba3dc4, type: 2}
     heightMap: {fileID: 2800000, guid: 19e9398a3429914498796d99b5aa5635, type: 3}
   - scale: {x: 1, y: 1.5, z: 1}
     mesh: {fileID: 4300000, guid: 947e8da8987d86a41b3f384b39ec37cd, type: 2}
+    material: {fileID: 2100000, guid: 0799a1e95665ef14f8fe2cbcd4ba3dc4, type: 2}
     heightMap: {fileID: 2800000, guid: 0638cb55337899646a1374a7f3a8f72d, type: 3}
   baseVegNoiseScale: 0.2
   detailVegNoiseScale: 0.8
@@ -2078,36 +2177,61 @@ MonoBehaviour:
   itemDatas:
   - scale: {x: 1, y: 1, z: 1}
     mesh: {fileID: -808811649734903215, guid: d721af70c8ba1ab4daa81f30de0dbb54, type: 3}
+    material: {fileID: 2100000, guid: 7accf27719c7b034b94f8669f19c4aaf, type: 2}
     probability: 0.7
     maxY: 10
   - scale: {x: 1, y: 1, z: 1}
     mesh: {fileID: 3015167987163436581, guid: ddd36401006c8654eae1d9a6bcd6380d, type: 3}
+    material: {fileID: 2100000, guid: 7accf27719c7b034b94f8669f19c4aaf, type: 2}
     probability: 0.7
     maxY: 10
   - scale: {x: 1, y: 1, z: 1}
     mesh: {fileID: 2249462234500842342, guid: c6b568bf9e55de141add501b8cd2a0e9, type: 3}
+    material: {fileID: 2100000, guid: 7accf27719c7b034b94f8669f19c4aaf, type: 2}
     probability: 0.7
     maxY: 10
   - scale: {x: 1, y: 1, z: 1}
     mesh: {fileID: 5006698605598939749, guid: a3ccb41ae53c6bf4bb0a5bfc470bf069, type: 3}
+    material: {fileID: 2100000, guid: 7accf27719c7b034b94f8669f19c4aaf, type: 2}
     probability: 0.7
     maxY: 10
   - scale: {x: 1, y: 1, z: 1}
     mesh: {fileID: 1090956746362370221, guid: 3184c8a016da6e34abff1686da99650b, type: 3}
+    material: {fileID: 2100000, guid: 0799a1e95665ef14f8fe2cbcd4ba3dc4, type: 2}
     probability: 0.3
     maxY: 2
   - scale: {x: 1, y: 1, z: 1}
     mesh: {fileID: -1806810134458854372, guid: 7ed75b99c26237b4d844c1581c5da1b2, type: 3}
+    material: {fileID: 2100000, guid: 0799a1e95665ef14f8fe2cbcd4ba3dc4, type: 2}
     probability: 0.3
     maxY: 2
   - scale: {x: 1, y: 1, z: 1}
     mesh: {fileID: -7011766824195413768, guid: b0ba9b7cecd675b45894beca57389899, type: 3}
+    material: {fileID: 2100000, guid: 0799a1e95665ef14f8fe2cbcd4ba3dc4, type: 2}
     probability: 0.3
     maxY: 2
   - scale: {x: 0.7, y: 0.7, z: 0.7}
     mesh: {fileID: 4890176300591525589, guid: d818648c1b009ab48a03dbcc4ae09583, type: 3}
+    material: {fileID: 2100000, guid: 0799a1e95665ef14f8fe2cbcd4ba3dc4, type: 2}
     probability: 0.2
     maxY: 0
+--- !u!114 &1865306867
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1865306862}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a0f1ba1e7fca0c4aae13d5666d91c3d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  audioManager: {fileID: 1865306865}
+  transitionThreshold: 0.1
+  spectrumThreshold: 0.3
+  spectrumScale: 1
+  swingPI: {x: 0.5, y: 0.5}
 --- !u!1001 &1933268119
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using Unity.Collections;
 using UnityEngine;
 
-public class Note
+public struct Note
 {
     public float time;
     public int track;
@@ -14,7 +14,7 @@ public static class ChartGenerator
     public static int windowSize = 1024;
     public static int moveLength = 2048;
     public static int historySize = 43;
-    public static float sensitivity = 0.8f;
+    public static float sensitivity = 0.9f;
 
     static List<Note> s_notes = new List<Note>();
 
@@ -56,14 +56,14 @@ public static class ChartGenerator
                 }
                 variance /= historySize;
 
-                float C = 1.5142857f - variance / average / average * 0.0025714f;
+                float C = 1.5142857f - variance / average / average * 0.025714f;
                 float currentTime = (float)sampleIndex / sampleRate / 2;
                 if (energy > sensitivity * C * average && currentTime - lastTime > step)
                 {
                     s_notes.Add(new Note
                     {
                         time = timeOffset + currentTime,
-                        track = Mathf.Abs(energy - lastEnergy) > average ? Random.Range(0, numTracks) : lastTrack
+                        track = Mathf.Abs(energy - lastEnergy) > variance ? Random.Range(0, numTracks) : lastTrack
                     });
                     lastTrack = s_notes[s_notes.Count - 1].track;
                     lastEnergy = energy;
