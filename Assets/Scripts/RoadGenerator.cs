@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Unity.Collections;
 using UnityEngine;
@@ -96,8 +97,9 @@ public static class RoadGenerator
 {
     const int ControlPointCapacity = 20;
     public const int LandCol = 6;
-    public static float baseSegmentLength = 100f;
+
     public static Vector2 landSpacing = new Vector2(10, 20);
+    public static float slope = 10.0f;
 
     static ControlPoint[] s_controlPoints = InitializeControlPoints();
     static int s_controlPointsHead = 0;
@@ -107,6 +109,11 @@ public static class RoadGenerator
     static float s_totalLength = 0;
     static float[] s_landLength = new float[LandCol];
     static float s_lengthEpisilon = 1e-4f;
+
+    public static float GetRoadLength()
+    {
+        return s_totalLength;
+    }
 
     public static float GetLandRatio(int col)
     {
@@ -123,14 +130,36 @@ public static class RoadGenerator
         return controlPoints;
     }
 
-    static void GenerateNextControlPoint()
+    public static void GenerateNextControlPoint(float[] samples, float targetLength)
     {
-        ControlPoint lastControlPoint = s_controlPoints[(s_controlPointsHead + s_controlPointsSize - 1) % ControlPointCapacity];
+        int prevIndex = (s_controlPointsHead + s_controlPointsSize - 1) % ControlPointCapacity;
+        ControlPoint prevControlPoint = s_controlPoints[prevIndex];
 
-        Vector3 nextPosition = lastControlPoint.position + Quaternion.Euler(UnityEngine.Random.Range(-3.0f, 3.0f), UnityEngine.Random.Range(-45.0f, 45.0f), 0) * lastControlPoint.direction * baseSegmentLength;
-        Vector3 nextDirection = nextPosition - lastControlPoint.position;
-        nextDirection.y = 0;
-        nextDirection = Quaternion.Euler(0, UnityEngine.Random.Range(-45.0f, 45.0f), 0) * nextDirection.normalized;
+        float L = targetLength;
+        float avgE = 0;
+        foreach (float sample in samples)
+        {
+            avgE += sample;
+        }
+        avgE /= samples.Length;
+        Vector3 nextPosDirection = Quaternion.Euler(slope * (avgE - 0.5f), UnityEngine.Random.Range(-25.0f, 25.0f), 0) * prevControlPoint.direction;
+        Vector3 nextPosition = prevControlPoint.position + L * nextPosDirection;
+        Vector3 nextDirection = Quaternion.Euler(slope * (avgE - 0.5f), UnityEngine.Random.Range(-25.0f, 25.0f), 0) * new Vector3(nextPosDirection.x, 0, nextPosDirection.z).normalized;
+        Vector3 P0 = prevControlPoint.position;
+        Vector3 P3 = nextPosition;
+        Vector3 P1 = P0 + prevControlPoint.direction * L / 3;
+        Vector3 P2 = P3 - nextDirection * L / 3;
+        BezierCurve curve = new BezierCurve(P0, P1, P2, P3);
+        // iterate until curve length is close enough to target length
+        while (Mathf.Abs(curve.length - targetLength) > s_lengthEpisilon)
+        {
+            L -= curve.length - targetLength;
+            nextPosition = prevControlPoint.position + L * nextPosDirection;
+            P3 = nextPosition;
+            P1 = P0 + prevControlPoint.direction * L / 3;
+            P2 = P3 - nextDirection * L / 3;
+            curve = new BezierCurve(P0, P1, P2, P3);
+        }
 
         // remove head
         if (s_controlPointsSize == ControlPointCapacity)
@@ -138,42 +167,13 @@ public static class RoadGenerator
             s_controlPointsHead = (s_controlPointsHead + 1) % ControlPointCapacity;
             s_controlPointsSize--;
         }
-        s_controlPoints[(s_controlPointsHead + s_controlPointsSize) % ControlPointCapacity] = new ControlPoint { position = nextPosition, direction = nextDirection };
+        int nextIndex = (s_controlPointsHead + s_controlPointsSize) % ControlPointCapacity;
+        s_controlPoints[nextIndex] = new ControlPoint { position = nextPosition, direction = nextDirection };
         s_controlPointsSize++;
-    }
 
-    static Vector3 Intersection(Vector3 A, Vector3 B, Vector3 C, Vector3 D, Vector3 v)
-    {
-        Vector3 abDir = B - A;
-        Vector3 cdDir = D - C;
-
-        Vector3 planeNormal = Vector3.Cross(cdDir, v).normalized;
-        float denominator = Vector3.Dot(planeNormal, abDir);
-
-        // parallel
-        if (Mathf.Approximately(denominator, 0f))
-        {
-            return B;
-        }
-
-        float t = Vector3.Dot(planeNormal, C - A) / denominator;
-        return A + t * abDir;
-    }
-
-    static void UpdateCurves()
-    {
-        if (s_controlPointsSize < 2) return;
-
-        int prevIndex = (s_controlPointsHead + s_controlPointsSize - 2) % ControlPointCapacity;
-        int nextIndex = (s_controlPointsHead + s_controlPointsSize - 1) % ControlPointCapacity;
-        Vector3 P0 = s_controlPoints[prevIndex].position;
-        Vector3 P1 = P0 + s_controlPoints[prevIndex].direction * baseSegmentLength / 3;
-        Vector3 P3 = s_controlPoints[nextIndex].position;
-        Vector3 P2 = P3 - s_controlPoints[nextIndex].direction * baseSegmentLength / 3;
-
-        s_curves[prevIndex] = new BezierCurve(P0, P1, P2, P3);
-        s_totalLength += s_curves[prevIndex].length;
-
+        // update curves
+        s_curves[prevIndex] = curve;
+        s_totalLength += targetLength;
         Vector3 P0normal = Vector3.Cross(s_controlPoints[prevIndex].direction, Vector3.up).normalized;
         Vector3 P12normal = Vector3.Cross(P2 - P1, Vector3.up).normalized;
         Vector3 P3normal = Vector3.Cross(s_controlPoints[nextIndex].direction, Vector3.up).normalized;
@@ -196,24 +196,39 @@ public static class RoadGenerator
         }
     }
 
-    public static Matrix4x4 GetTransform(float L)
+    static Vector3 Intersection(Vector3 A, Vector3 B, Vector3 C, Vector3 D, Vector3 v)
     {
-        while (L >= s_totalLength)
+        Vector3 abDir = B - A;
+        Vector3 cdDir = D - C;
+
+        Vector3 planeNormal = Vector3.Cross(cdDir, v).normalized;
+        float denominator = Vector3.Dot(planeNormal, abDir);
+
+        // parallel
+        if (Mathf.Approximately(denominator, 0f))
         {
-            GenerateNextControlPoint();
-            UpdateCurves();
+            return B;
         }
 
-        // search segment
-        float nowL = s_totalLength;
-        for (int i = s_controlPointsSize - 2; i >= 0; i--)
+        float t = Vector3.Dot(planeNormal, C - A) / denominator;
+        return A + t * abDir;
+    }
+
+    public static Matrix4x4 GetTransform(float L)
+    {
+        if (L < s_totalLength)
         {
-            int index = (s_controlPointsHead + i) % ControlPointCapacity;
-            nowL -= s_curves[index].length;
-            if (nowL <= L || nowL < s_lengthEpisilon)
+            // search segment
+            float nowL = s_totalLength;
+            for (int i = s_controlPointsSize - 2; i >= 0; i--)
             {
-                float s = (L - nowL) / s_curves[index].length;
-                return s_curves[index].GetTransform(s);
+                int index = (s_controlPointsHead + i) % ControlPointCapacity;
+                nowL -= s_curves[index].length;
+                if (nowL <= L || nowL < s_lengthEpisilon)
+                {
+                    float s = (L - nowL) / s_curves[index].length;
+                    return s_curves[index].GetTransform(s);
+                }
             }
         }
         return Matrix4x4.identity;
@@ -221,25 +236,21 @@ public static class RoadGenerator
 
     public static Matrix4x4 GetXTransform(float L, int landID)
     {
-        while (L >= s_landLength[landID])
+        if (L < s_landLength[landID])
         {
-            GenerateNextControlPoint();
-            UpdateCurves();
-        }
-
-        // search segment
-        float nowL = s_landLength[landID];
-        for (int i = s_controlPointsSize - 2; i >= 0; i--)
-        {
-            int index = (s_controlPointsHead + i) % ControlPointCapacity;
-            nowL -= s_landCurves[landID, index].length;
-            if (nowL <= L || nowL < s_lengthEpisilon)
+            // search segment
+            float nowL = s_landLength[landID];
+            for (int i = s_controlPointsSize - 2; i >= 0; i--)
             {
-                float s = (L - nowL) / s_landCurves[landID, index].length;
-                return s_landCurves[landID, index].GetTransform(s);
+                int index = (s_controlPointsHead + i) % ControlPointCapacity;
+                nowL -= s_landCurves[landID, index].length;
+                if (nowL <= L || nowL < s_lengthEpisilon)
+                {
+                    float s = (L - nowL) / s_landCurves[landID, index].length;
+                    return s_landCurves[landID, index].GetTransform(s);
+                }
             }
         }
-        Debug.Log(nowL);
         return Matrix4x4.identity;
     }
 }

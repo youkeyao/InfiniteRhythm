@@ -23,8 +23,8 @@ public struct ItemData
 public class MapManager : MonoBehaviour
 {
     public LevelManager levelManager;
+    public AudioManager audioManager;
 
-    public float showDistance = 200.0f;
     public Transform cameraTransform;
 
     // road
@@ -78,6 +78,7 @@ public class MapManager : MonoBehaviour
     {
         if (levelManager.isPlaying)
         {
+            // generate map
             GenerateRoad();
             GenerateLand();
         }
@@ -108,8 +109,7 @@ public class MapManager : MonoBehaviour
 
     void GenerateRoad()
     {
-        float currentTime = Time.time - levelManager.startTime;
-        while (m_roadDistance < currentTime * levelManager.speed + showDistance)
+        while (m_roadDistance < RoadGenerator.GetRoadLength())
         {
             Quaternion rotation = Quaternion.Euler(roadRotation);
             if (m_random.NextBool())
@@ -124,7 +124,6 @@ public class MapManager : MonoBehaviour
 
     void GenerateLand()
     {
-        float currentTime = Time.time - levelManager.startTime;
         int landIndex = 0;
         for (int i = 1; i < RoadGenerator.LandCol; i++)
         {
@@ -133,7 +132,7 @@ public class MapManager : MonoBehaviour
                 landIndex = i;
             }
         }
-        while (m_landDistances[landIndex] < RoadGenerator.GetLandRatio(landIndex) * currentTime * levelManager.speed + showDistance)
+        while (m_landDistances[landIndex] < RoadGenerator.GetLandRatio(landIndex) * RoadGenerator.GetRoadLength())
         {
             int landMeshIndex = m_random.NextInt(0, landDatas.Length);
             // avoid continuous land

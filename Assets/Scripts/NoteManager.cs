@@ -5,11 +5,10 @@ public class NoteManager : MonoBehaviour
 {
     public LevelManager levelManager;
     public AudioManager audioManager;
-    public Vector3 noteScale = new Vector3(1, 0.3f, 1);
+    public Vector3 noteScale = new Vector3(1, 1, 1);
     public Mesh noteMesh;
     public Material noteMaterial;
     public float hitThreshold = 1.5f;
-    public float showDistance = 50.0f;
     public KeyCode[] keyCodes = new KeyCode[]
     {
         KeyCode.A,
@@ -38,7 +37,7 @@ public class NoteManager : MonoBehaviour
 
             // Spawn
             Queue<Note> chart = audioManager.GetChart();
-            while (chart.Count > 0 && currentTime >= chart.Peek().time - showDistance / levelManager.speed)
+            while (chart.Count > 0)
             {
                 Note note = chart.Dequeue();
                 Vector3 offset = new Vector3(note.track * spacing, 0, 0);

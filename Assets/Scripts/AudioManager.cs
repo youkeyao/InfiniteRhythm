@@ -10,7 +10,7 @@ public class AudioManager : MonoBehaviour
     const int NumSpectrumSample = 64;
 
     public LevelManager levelManager;
-    public int bufferSize = 5;
+    public int bufferSize = 10;
     public int sampleRate = 48000;
     public int numChannels = 2;
     public int numTracks = 4;
@@ -22,6 +22,7 @@ public class AudioManager : MonoBehaviour
     AudioSource m_audioSource;
     Queue<AudioClip> m_audioClips = new Queue<AudioClip>();
     Queue<Note> m_chart = new Queue<Note>();
+    Queue<float[]> m_sampleQueue = new Queue<float[]>();
     string m_wsurl = "wss://generativelanguage.googleapis.com//ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateMusic?key=AIzaSyBE_WpYLV2beN9E52AUsGTjzjs82_DVT_I";
     WebSocket m_webSocket;
     float m_audioLength;
@@ -66,7 +67,7 @@ public class AudioManager : MonoBehaviour
         await m_webSocket.SendText("{\"setup\": {\"model\": \"models/lyria-realtime-exp\"}}");
         // SetWeightedPrompts("synthwave", 1.0f);
         SetWeightedPrompts("chillwave", 1.0f);
-        // SetWeightedPrompts("Bossa Nova", 1.0f);
+        SetWeightedPrompts("Bossa Nova", 1.0f);
         // SetWeightedPrompts("Drum and Bass", 0.8f);
         // SetWeightedPrompts("Post Punk", 1.0f);
         // SetWeightedPrompts("Shoegaze", 0.5f);
@@ -92,6 +93,11 @@ public class AudioManager : MonoBehaviour
     public Queue<Note> GetChart()
     {
         return m_chart;
+    }
+
+    public Queue<float[]> GetSampleQueue()
+    {
+        return m_sampleQueue;
     }
 
     public float[] GetSpectrumData()
@@ -140,7 +146,10 @@ public class AudioManager : MonoBehaviour
             }
         }
         audioClip.SetData(samples, 0);
+        RoadGenerator.GenerateNextControlPoint(samples, samples.Length / (numChannels * sampleRate) * levelManager.speed);
+        m_sampleQueue.Enqueue(samples);
 
+        // generate chart
         List<Note> chart = ChartGenerator.GetChart(samples, sampleRate, m_audioLength, numTracks);
         foreach (Note note in chart)
         {

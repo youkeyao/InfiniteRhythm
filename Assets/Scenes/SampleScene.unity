@@ -869,7 +869,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 527870824}
-  - component: {fileID: 527870823}
+  - component: {fileID: 527870825}
   m_Layer: 0
   m_Name: NoteManager
   m_TagString: Untagged
@@ -877,7 +877,23 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &527870823
+--- !u!4 &527870824
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 527870822}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -6, y: 4.5, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 963194228}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &527870825
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -895,24 +911,7 @@ MonoBehaviour:
   noteMesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
   noteMaterial: {fileID: 2100000, guid: 4c337ed197e463c40ae6422fbbbf5258, type: 2}
   hitThreshold: 1.5
-  showDistance: 200
   keyCodes: 61000000640000006a0000006c000000
---- !u!4 &527870824
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 527870822}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -6, y: 4.5, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 963194228}
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &572089053
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2078,7 +2077,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1865306864}
   - component: {fileID: 1865306863}
-  - component: {fileID: 1865306866}
+  - component: {fileID: 1865306868}
   - component: {fileID: 1865306865}
   - component: {fileID: 1865306867}
   m_Layer: 0
@@ -2136,7 +2135,24 @@ MonoBehaviour:
   sampleRate: 48000
   numChannels: 2
   numTracks: 4
---- !u!114 &1865306866
+--- !u!114 &1865306867
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1865306862}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8a0f1ba1e7fca0c4aae13d5666d91c3d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  audioManager: {fileID: 1865306865}
+  transitionThreshold: 0.1
+  spectrumThreshold: 0.25
+  spectrumScale: 0.6
+  swingPI: {x: 0.5, y: 1.5}
+--- !u!114 &1865306868
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -2149,7 +2165,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   levelManager: {fileID: 1865306863}
-  showDistance: 400
+  audioManager: {fileID: 1865306865}
   cameraTransform: {fileID: 963194228}
   roadSpacing: 15
   roadRotation: {x: 0, y: 90, z: 0}
@@ -2215,23 +2231,6 @@ MonoBehaviour:
     material: {fileID: 2100000, guid: 0799a1e95665ef14f8fe2cbcd4ba3dc4, type: 2}
     probability: 0.2
     maxY: 0
---- !u!114 &1865306867
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1865306862}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8a0f1ba1e7fca0c4aae13d5666d91c3d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  audioManager: {fileID: 1865306865}
-  transitionThreshold: 0.1
-  spectrumThreshold: 0.3
-  spectrumScale: 1
-  swingPI: {x: 0.5, y: 0.5}
 --- !u!1001 &1933268119
 PrefabInstance:
   m_ObjectHideFlags: 0
