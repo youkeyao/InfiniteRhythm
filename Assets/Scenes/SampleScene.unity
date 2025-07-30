@@ -26,7 +26,7 @@ RenderSettings:
   m_AmbientIntensity: 1
   m_AmbientMode: 0
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
-  m_SkyboxMaterial: {fileID: 10304, guid: 0000000000000000f000000000000000, type: 0}
+  m_SkyboxMaterial: {fileID: 2100000, guid: 9803600998c48b140b2f7038d0fc2eb1, type: 2}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -1528,7 +1528,7 @@ MonoBehaviour:
     m_Bits: 1
   m_VolumeTrigger: {fileID: 0}
   m_VolumeFrameworkUpdateModeOption: 2
-  m_RenderPostProcessing: 0
+  m_RenderPostProcessing: 1
   m_Antialiasing: 0
   m_AntialiasingQuality: 2
   m_StopNaN: 0
@@ -1549,6 +1549,55 @@ MonoBehaviour:
     m_MipBias: 0
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
+--- !u!1 &1004961709
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1004961711}
+  - component: {fileID: 1004961710}
+  m_Layer: 0
+  m_Name: Global Volume
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1004961710
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1004961709}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 172515602e62fb746b5d573b38a5fe58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_IsGlobal: 1
+  priority: 0
+  blendDistance: 0
+  weight: 1
+  sharedProfile: {fileID: 11400000, guid: 8f7b501096ff43448b901105c7b3e13d, type: 2}
+--- !u!4 &1004961711
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1004961709}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 989.04926, y: 69.93293, z: 304.0802}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1091798482
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1759,7 +1808,7 @@ Transform:
   m_GameObject: {fileID: 1329848776}
   serializedVersion: 2
   m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 0, y: 5, z: 0}
+  m_LocalPosition: {x: 0, y: 50, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1777,8 +1826,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a7b4a3d2a9ca86c4a8cd1ce46711160f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mesh: {fileID: 6043185480894707810, guid: 38b178f6a1ea19f4baf761918779b712, type: 3}
-  savePath: Assets/heightmap.png
+  mesh: {fileID: -1162488442634701532, guid: 0a4e8c0b5a685eb4394da10424e65a7a, type: 3}
+  savePath: Assets
   textureSize: 1024
 --- !u!114 &1329848781
 MonoBehaviour:
@@ -2167,70 +2216,7 @@ MonoBehaviour:
   levelManager: {fileID: 1865306863}
   audioManager: {fileID: 1865306865}
   cameraTransform: {fileID: 963194228}
-  roadSpacing: 15
-  roadRotation: {x: 0, y: 90, z: 0}
-  roadScale: {x: 1, y: 1, z: 1}
-  roadMesh: {fileID: 2298263045900952535, guid: 324d33f3ad1481c4e8ba55d696fe64d9, type: 3}
-  roadMaterial: {fileID: 2100000, guid: 0799a1e95665ef14f8fe2cbcd4ba3dc4, type: 2}
-  landOverlap: 0.2
-  landDatas:
-  - scale: {x: 1, y: 1, z: 1}
-    mesh: {fileID: 5355927448623902033, guid: 5d113e0df0acd474cb544e13e9327875, type: 3}
-    material: {fileID: 2100000, guid: 0799a1e95665ef14f8fe2cbcd4ba3dc4, type: 2}
-    heightMap: {fileID: 2800000, guid: 508512af836115e4d964082f8e9df00d, type: 3}
-  - scale: {x: 1, y: 1, z: 1}
-    mesh: {fileID: 672551834481701363, guid: 08eefc2f613faa34fbb717ac2142af0a, type: 3}
-    material: {fileID: 2100000, guid: 0799a1e95665ef14f8fe2cbcd4ba3dc4, type: 2}
-    heightMap: {fileID: 2800000, guid: 19e9398a3429914498796d99b5aa5635, type: 3}
-  - scale: {x: 1, y: 1.5, z: 1}
-    mesh: {fileID: 4300000, guid: 947e8da8987d86a41b3f384b39ec37cd, type: 2}
-    material: {fileID: 2100000, guid: 0799a1e95665ef14f8fe2cbcd4ba3dc4, type: 2}
-    heightMap: {fileID: 2800000, guid: 0638cb55337899646a1374a7f3a8f72d, type: 3}
-  baseVegNoiseScale: 0.2
-  detailVegNoiseScale: 0.8
-  baseVegNoiseThreshold: 0.4
-  detailVegNoiseThreshold: 0.6
-  itemDatas:
-  - scale: {x: 1, y: 1, z: 1}
-    mesh: {fileID: -808811649734903215, guid: d721af70c8ba1ab4daa81f30de0dbb54, type: 3}
-    material: {fileID: 2100000, guid: 7accf27719c7b034b94f8669f19c4aaf, type: 2}
-    probability: 0.7
-    maxY: 10
-  - scale: {x: 1, y: 1, z: 1}
-    mesh: {fileID: 3015167987163436581, guid: ddd36401006c8654eae1d9a6bcd6380d, type: 3}
-    material: {fileID: 2100000, guid: 7accf27719c7b034b94f8669f19c4aaf, type: 2}
-    probability: 0.7
-    maxY: 10
-  - scale: {x: 1, y: 1, z: 1}
-    mesh: {fileID: 2249462234500842342, guid: c6b568bf9e55de141add501b8cd2a0e9, type: 3}
-    material: {fileID: 2100000, guid: 7accf27719c7b034b94f8669f19c4aaf, type: 2}
-    probability: 0.7
-    maxY: 10
-  - scale: {x: 1, y: 1, z: 1}
-    mesh: {fileID: 5006698605598939749, guid: a3ccb41ae53c6bf4bb0a5bfc470bf069, type: 3}
-    material: {fileID: 2100000, guid: 7accf27719c7b034b94f8669f19c4aaf, type: 2}
-    probability: 0.7
-    maxY: 10
-  - scale: {x: 1, y: 1, z: 1}
-    mesh: {fileID: 1090956746362370221, guid: 3184c8a016da6e34abff1686da99650b, type: 3}
-    material: {fileID: 2100000, guid: 0799a1e95665ef14f8fe2cbcd4ba3dc4, type: 2}
-    probability: 0.3
-    maxY: 2
-  - scale: {x: 1, y: 1, z: 1}
-    mesh: {fileID: -1806810134458854372, guid: 7ed75b99c26237b4d844c1581c5da1b2, type: 3}
-    material: {fileID: 2100000, guid: 0799a1e95665ef14f8fe2cbcd4ba3dc4, type: 2}
-    probability: 0.3
-    maxY: 2
-  - scale: {x: 1, y: 1, z: 1}
-    mesh: {fileID: -7011766824195413768, guid: b0ba9b7cecd675b45894beca57389899, type: 3}
-    material: {fileID: 2100000, guid: 0799a1e95665ef14f8fe2cbcd4ba3dc4, type: 2}
-    probability: 0.3
-    maxY: 2
-  - scale: {x: 0.7, y: 0.7, z: 0.7}
-    mesh: {fileID: 4890176300591525589, guid: d818648c1b009ab48a03dbcc4ae09583, type: 3}
-    material: {fileID: 2100000, guid: 0799a1e95665ef14f8fe2cbcd4ba3dc4, type: 2}
-    probability: 0.2
-    maxY: 0
+  sceneData: {fileID: 11400000, guid: 740e77b06df36554e8aad50e7c7f0fd4, type: 2}
 --- !u!1001 &1933268119
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2675,6 +2661,7 @@ SceneRoots:
   - {fileID: 527870824}
   - {fileID: 307238520}
   - {fileID: 242178472}
+  - {fileID: 1004961711}
   - {fileID: 1350143802}
   - {fileID: 1091798482}
   - {fileID: 1730650952}

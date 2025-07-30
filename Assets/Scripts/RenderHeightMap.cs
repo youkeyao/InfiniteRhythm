@@ -5,7 +5,7 @@ using UnityEngine;
 public class RenderHeightMap : MonoBehaviour
 {
     public Mesh mesh;
-    public string savePath = "Assets/heightmap.png";
+    public string savePath = "Assets";
     public int textureSize = 1024;
 
     void Start()
@@ -15,6 +15,7 @@ public class RenderHeightMap : MonoBehaviour
         go.AddComponent<MeshRenderer>().sharedMaterial = new Material(Shader.Find("Custom/HeightMap"));
         Camera.main.orthographicSize = mesh.bounds.size.x / 2;
         Shader.SetGlobalFloat("_HeightScale", mesh.bounds.size.y);
+        savePath = $"{savePath}/{mesh.name}.png";
     }
 
     void OnRenderImage(RenderTexture source, RenderTexture destination)

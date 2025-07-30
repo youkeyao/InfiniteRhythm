@@ -170,6 +170,7 @@ Material:
     - _EnableExternalAlpha: 0
     - _EnvironmentReflections: 1
     - _Exposure: 1
+    - _FlipbookBlending: 0
     - _FlipbookMode: 0
     - _Focus: -100
     - _GlossMapScale: 1
@@ -215,6 +216,7 @@ Material:
     - _ZWrite: 0
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
+    - _BaseColorAddSubDiff: {r: 0, g: 0, b: 0, a: 0}
     - _CameraFadeParams: {r: 0, g: Infinity, b: 0, a: 0}
     - _ClipRect: {r: -32767, g: -32767, b: 32767, a: 32767}
     - _Color: {r: 1, g: 1, b: 1, a: 1}

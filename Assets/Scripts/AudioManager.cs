@@ -7,7 +7,7 @@ using System;
 
 public class AudioManager : MonoBehaviour
 {
-    const int NumSpectrumSample = 64;
+    const int NumSpectrumSample = 1024;
 
     public LevelManager levelManager;
     public int bufferSize = 10;
@@ -22,7 +22,6 @@ public class AudioManager : MonoBehaviour
     AudioSource m_audioSource;
     Queue<AudioClip> m_audioClips = new Queue<AudioClip>();
     Queue<Note> m_chart = new Queue<Note>();
-    Queue<float[]> m_sampleQueue = new Queue<float[]>();
     string m_wsurl = "wss://generativelanguage.googleapis.com//ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateMusic?key=AIzaSyBE_WpYLV2beN9E52AUsGTjzjs82_DVT_I";
     WebSocket m_webSocket;
     float m_audioLength;
@@ -95,11 +94,6 @@ public class AudioManager : MonoBehaviour
         return m_chart;
     }
 
-    public Queue<float[]> GetSampleQueue()
-    {
-        return m_sampleQueue;
-    }
-
     public float[] GetSpectrumData()
     {
         return m_spectrum;
@@ -147,7 +141,6 @@ public class AudioManager : MonoBehaviour
         }
         audioClip.SetData(samples, 0);
         RoadGenerator.GenerateNextControlPoint(samples, samples.Length / (numChannels * sampleRate) * levelManager.speed);
-        m_sampleQueue.Enqueue(samples);
 
         // generate chart
         List<Note> chart = ChartGenerator.GetChart(samples, sampleRate, m_audioLength, numTracks);
@@ -194,6 +187,8 @@ public class AudioManager : MonoBehaviour
             }
 
             m_audioSource.GetSpectrumData(m_spectrum, 0, FFTWindow.BlackmanHarris);
+            Shader.SetGlobalFloat("_Volume", m_audioSource.volume);
+            Shader.SetGlobalFloatArray("_Spectrum", m_spectrum);
         }
     }
 

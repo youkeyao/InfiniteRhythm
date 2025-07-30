@@ -60,17 +60,6 @@ Shader "Custom/TreeSwing"
         [ToggleUI] _ReceiveShadows("Receive Shadows", Float) = 1.0
         // Editmode props
         _QueueOffset("Queue offset", Float) = 0.0
-
-        // ObsoleteProperties
-        [HideInInspector] _MainTex("BaseMap", 2D) = "white" {}
-        [HideInInspector] _Color("Base Color", Color) = (1, 1, 1, 1)
-        [HideInInspector] _GlossMapScale("Smoothness", Float) = 0.0
-        [HideInInspector] _Glossiness("Smoothness", Float) = 0.0
-        [HideInInspector] _GlossyReflections("EnvironmentReflections", Float) = 0.0
-
-        [HideInInspector][NoScaleOffset]unity_Lightmaps("unity_Lightmaps", 2DArray) = "" {}
-        [HideInInspector][NoScaleOffset]unity_LightmapsInd("unity_LightmapsInd", 2DArray) = "" {}
-        [HideInInspector][NoScaleOffset]unity_ShadowMasks("unity_ShadowMasks", 2DArray) = "" {}
     }
 
     SubShader
@@ -85,8 +74,8 @@ Shader "Custom/TreeSwing"
             AlphaToMask[_AlphaToMask]
 
             HLSLPROGRAM
-            #pragma vertex vert
-            #pragma fragment frag
+            #pragma vertex LitPassVertex
+            #pragma fragment LitPassFragment
             #pragma multi_compile_instancing
 
             // -------------------------------------
@@ -137,7 +126,7 @@ Shader "Custom/TreeSwing"
             ///////////////////////////////////////////////////////////////////////////////
 
             // Used in Standard (Physically Based) shader
-            Varyings vert(Attributes input)
+            Varyings LitPassVertex(Attributes input)
             {
                 Varyings output = (Varyings)0;
 
@@ -169,7 +158,7 @@ Shader "Custom/TreeSwing"
             }
 
             // Used in Standard (Physically Based) shader
-            half4 frag(Varyings input) : SV_Target
+            half4 LitPassFragment(Varyings input) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
