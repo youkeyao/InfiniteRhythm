@@ -1,8 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using System.IO;
-using UnityEngine.Networking;
-using Unity.VisualScripting;
 
 public class LevelManager : MonoBehaviour
 {
@@ -10,8 +7,17 @@ public class LevelManager : MonoBehaviour
 
     public GameObject playButton;
 
-    public bool isPlaying  = false;
-    public float startTime = 0;
+    public KeyCode[] keyCodes = new KeyCode[]
+    {
+        KeyCode.A,
+        KeyCode.D,
+        KeyCode.J,
+        KeyCode.L,
+    };
+    public int NumTracks => keyCodes.Length;
+
+    [HideInInspector] public bool isPlaying = false;
+    [HideInInspector] public float startTime = 0;
 
     void Start()
     {

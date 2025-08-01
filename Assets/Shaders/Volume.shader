@@ -90,7 +90,7 @@ Shader "Custom/Volume"
                 UNITY_DEFINE_INSTANCED_PROP(half, _Cutoff)
                 UNITY_DEFINE_INSTANCED_PROP(half, _Surface)
                 UNITY_DEFINE_INSTANCED_PROP(half, _Emission)
-                UNITY_DEFINE_INSTANCED_PROP(float, _LandSamples)
+                UNITY_DEFINE_INSTANCED_PROP(float, _Samples)
             UNITY_INSTANCING_BUFFER_END(UnityPerMaterial)
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Unlit.hlsl"
@@ -145,28 +145,13 @@ Shader "Custom/Volume"
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
 
-                float sample = abs(UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _LandSamples));
-                input.positionOS.y *= sample * 40;
-                input.positionOS.y += sample * 20;
-
-                float3 translation = TransformObjectToWorld(float3(0, 0, 0));
-                float3 worldForward = TransformObjectToWorldDir(float3(0, 0, 1));
-                float yRotation = atan2(worldForward.x, worldForward.z);
-                float cosTheta = cos(yRotation);
-                float sinTheta = sin(yRotation);
-                float4x4 newTransform = {
-                    cosTheta, 0, sinTheta, translation.x,
-                    0,        1, 0,         translation.y,
-                    -sinTheta, 0, cosTheta, translation.z,
-                    0,        0, 0,         1
-                };
-
-                float4 worldPos = mul(newTransform, input.positionOS);
-                output.positionCS = mul(UNITY_MATRIX_VP, worldPos);
+                float sample = abs(UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _Samples));
+                input.positionOS.x *= sample * 40;
+                input.positionOS.y -= 20;
+                output.positionCS = mul(UNITY_MATRIX_MVP, input.positionOS);
 
                 float noiseScale = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _NoiseScale);
-                translation.y = 0;
-                float noiseRaw = PerlinNoise(translation * noiseScale);
+                float noiseRaw = PerlinNoise(TransformObjectToWorld(float3(0, 0, 0)) * noiseScale);
                 float4 colorA = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _ColorA);
                 float4 colorB = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _ColorB);
                 float4 colorC = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _ColorC);

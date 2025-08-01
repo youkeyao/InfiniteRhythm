@@ -3,17 +3,23 @@ using System.Text;
 using NativeWebSocket;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
+using System.Linq;
 using System;
+
+struct AudioData
+{
+    public float[] samples;
+    public float time;
+}
 
 public class AudioManager : MonoBehaviour
 {
     const int NumSpectrumSample = 1024;
 
     public LevelManager levelManager;
-    public int bufferSize = 10;
+    public int bufferSize = 15;
     public int sampleRate = 48000;
     public int numChannels = 2;
-    public int numTracks = 4;
 
     Dictionary<string, float> m_weightedPrompts = new Dictionary<string, float>();
     float m_temperature = 1.0f;
@@ -21,12 +27,14 @@ public class AudioManager : MonoBehaviour
 
     AudioSource m_audioSource;
     Queue<AudioClip> m_audioClips = new Queue<AudioClip>();
+    List<AudioData> m_audioDatas = new List<AudioData>();
     Queue<Note> m_chart = new Queue<Note>();
     string m_wsurl = "wss://generativelanguage.googleapis.com//ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateMusic?key=AIzaSyBE_WpYLV2beN9E52AUsGTjzjs82_DVT_I";
     WebSocket m_webSocket;
     float m_audioLength;
     bool m_isSetup = false;
     bool m_isGenerating = false;
+    float m_maxSpectrum = 0;
     float[] m_spectrum = new float[NumSpectrumSample];
 
     async void Start()
@@ -47,7 +55,11 @@ public class AudioManager : MonoBehaviour
             Setup();
         };
         m_webSocket.OnError += (e) => Debug.Log("WebSocket Error: " + e);
-        m_webSocket.OnClose += (e) => Debug.Log("WebSocket Closed: " + e);
+        m_webSocket.OnClose += (e) =>
+        {
+            Debug.Log("WebSocket Closed: " + e);
+            levelManager.isPlaying = false;
+        };
         m_webSocket.OnMessage += (bytes) =>
         {
             string jsonString = Encoding.UTF8.GetString(bytes);
@@ -99,6 +111,11 @@ public class AudioManager : MonoBehaviour
         return m_spectrum;
     }
 
+    public float GetMaxSpectrum()
+    {
+        return m_maxSpectrum;
+    }
+
     public void SetWeightedPrompts(string prompt, float weight)
     {
         m_weightedPrompts[prompt] = weight;
@@ -140,16 +157,23 @@ public class AudioManager : MonoBehaviour
             }
         }
         audioClip.SetData(samples, 0);
-        RoadGenerator.GenerateNextControlPoint(samples, samples.Length / (numChannels * sampleRate) * levelManager.speed);
+        // RoadGenerator.GenerateNextControlPoint(samples, samples.Length / (numChannels * sampleRate) * levelManager.speed);
 
         // generate chart
-        List<Note> chart = ChartGenerator.GetChart(samples, sampleRate, m_audioLength, numTracks);
+        List<Note> chart = ChartGenerator.GetChart(samples, sampleRate, m_audioLength, levelManager.NumTracks);
         foreach (Note note in chart)
         {
             m_chart.Enqueue(note);
         }
         m_audioLength += audioClip.length;
         m_audioClips.Enqueue(audioClip);
+        m_audioDatas.Add(new AudioData { samples = samples, time = m_audioLength });
+
+        // generate curve
+        while (CurveGenerator.GetLength(0) < m_audioLength * levelManager.speed)
+        {
+            CurveGenerator.GenerateNextControlPoint(samples);
+        }
     }
 
     void Update()
@@ -158,25 +182,7 @@ public class AudioManager : MonoBehaviour
         {
             m_webSocket.DispatchMessageQueue();
 
-            if (levelManager.isPlaying && !m_audioSource.isPlaying)
-            {
-                // unpause
-                if (!m_audioSource.isPlaying)
-                    m_audioSource.UnPause();
-                // finished, play next clip
-                if ((m_audioSource.clip == null || !m_audioSource.isPlaying) && m_audioClips.Count > 0)
-                {
-                    m_audioSource.clip = m_audioClips.Dequeue();
-                    m_audioSource.Play();
-                }
-            }
-            else if (!levelManager.isPlaying && m_audioSource.isPlaying)
-            {
-                // pause
-                m_audioSource.Pause();
-            }
-
-            // Control generation speed
+            // control generation speed
             if (m_audioClips.Count > bufferSize)
             {
                 Pause();
@@ -185,16 +191,40 @@ public class AudioManager : MonoBehaviour
             {
                 Play();
             }
-
-            m_audioSource.GetSpectrumData(m_spectrum, 0, FFTWindow.BlackmanHarris);
-            Shader.SetGlobalFloat("_Volume", m_audioSource.volume);
-            Shader.SetGlobalFloatArray("_Spectrum", m_spectrum);
         }
+
+        if (levelManager.isPlaying && !m_audioSource.isPlaying)
+        {
+            // unpause
+            if (!m_audioSource.isPlaying)
+                m_audioSource.UnPause();
+            // finished, play next clip
+            if ((m_audioSource.clip == null || !m_audioSource.isPlaying) && m_audioClips.Count > 0)
+            {
+                m_audioSource.clip = m_audioClips.Dequeue();
+                m_audioSource.Play();
+            }
+            else
+            {
+                levelManager.isPlaying = false;
+            }
+        }
+        else if (!levelManager.isPlaying && m_audioSource.isPlaying)
+        {
+            // pause
+            m_audioSource.Pause();
+        }
+
+        // update spectrum
+        m_audioSource.GetSpectrumData(m_spectrum, 0, FFTWindow.BlackmanHarris);
+        Shader.SetGlobalFloatArray("_Spectrum", m_spectrum);
+        m_maxSpectrum = m_spectrum.Max();
+        Shader.SetGlobalFloat("_MaxSpectrum", m_maxSpectrum);
     }
 
     async void Play()
     {
-        if (!m_isGenerating)
+        if (!m_isGenerating && m_webSocket.State == WebSocketState.Open)
         {
             m_isGenerating = true;
             await m_webSocket.SendText("{\"playbackControl\": \"PLAY\"}");
@@ -203,7 +233,7 @@ public class AudioManager : MonoBehaviour
 
     async void Stop()
     {
-        if (m_isGenerating)
+        if (m_isGenerating && m_webSocket.State == WebSocketState.Open)
         {
             m_isGenerating = false;
             await m_webSocket.SendText("{\"playbackControl\": \"STOP\"}");
@@ -212,10 +242,27 @@ public class AudioManager : MonoBehaviour
 
     async void Pause()
     {
-        if (m_isGenerating)
+        if (m_isGenerating && m_webSocket.State == WebSocketState.Open)
         {
             m_isGenerating = false;
             await m_webSocket.SendText("{\"playbackControl\": \"PAUSE\"}");
         }
+    }
+    
+    public float GetSample(float time)
+    {
+        if (time < m_audioLength)
+        {
+            float lastTime = 0;
+            for (int i = 0; i < m_audioDatas.Count; i++)
+            {
+                if (time < m_audioDatas[i].time)
+                {
+                    return m_audioDatas[i].samples[(int)((time - lastTime) / (m_audioDatas[i].time - lastTime) * m_audioDatas[i].samples.Length)];
+                }
+                lastTime = m_audioDatas[i].time;
+            }
+        }
+        return 0;
     }
 }

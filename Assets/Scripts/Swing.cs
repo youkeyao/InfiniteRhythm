@@ -19,10 +19,10 @@ public class Swing : MonoBehaviour
 
     void Update()
     {
-        float spectrum = audioManager.GetSpectrumData()[0];
-        if (spectrum > spectrumThreshold)
+        float maxSpectrum = audioManager.GetMaxSpectrum();
+        if (maxSpectrum > spectrumThreshold && (Mathf.Abs(m_swingValue) > (1 - transitionThreshold) || Mathf.Abs(m_swingValue) < transitionThreshold))
         {
-            m_swingTarget = -Mathf.Sign(m_swingTarget) * spectrumScale * spectrum;
+            m_swingTarget = -Mathf.Sign(m_swingTarget) * spectrumScale * maxSpectrum;
         }
         float nowE = m_swingTarget - m_swingValue;
         m_swingValue += (swingPI[0] * (nowE - m_lastE) + swingPI[1] * nowE) * Time.deltaTime;

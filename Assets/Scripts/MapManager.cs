@@ -12,11 +12,9 @@ public class MapManager : MonoBehaviour
     public SceneData sceneData;
 
     // private variables
-    float m_roadDistance = 0;
     float[] m_landDistances;
-    Queue<Matrix4x4> m_roadSpawnQueue = new Queue<Matrix4x4>();
-    List<Queue<Matrix4x4>> m_landSpawnQueues = new List<Queue<Matrix4x4>>();
     List<Queue<float>> m_landSampleQueues = new List<Queue<float>>();
+    List<Queue<Matrix4x4>> m_landSpawnQueues = new List<Queue<Matrix4x4>>();
     List<Queue<Matrix4x4>> m_itemSpawnQueues = new List<Queue<Matrix4x4>>();
 
     MaterialPropertyBlock m_landProperties;
@@ -31,8 +29,8 @@ public class MapManager : MonoBehaviour
             m_landSpawnQueues.Add(new Queue<Matrix4x4>());
             m_landSampleQueues.Add(new Queue<float>());
         }
-        m_landDistances = new float[RoadGenerator.LandCol];
-        for (int i = 0; i < RoadGenerator.LandCol; i++)
+        m_landDistances = new float[CurveGenerator.ChildCol * 2 + 1];
+        for (int i = 0; i < CurveGenerator.ChildCol * 2 + 1; i++)
         {
             m_landDistances[i] = 0;
         }
@@ -47,19 +45,21 @@ public class MapManager : MonoBehaviour
         // generate map
         if (levelManager.isPlaying)
         {
-            GenerateRoad();
             GenerateLand();
         }
 
         // Dispose & Draw
-        while (m_roadSpawnQueue.Count > 0 && Vector3.Dot(m_roadSpawnQueue.Peek().GetPosition() - cameraTransform.position, cameraTransform.forward) < 0)
-        {
-            m_roadSpawnQueue.Dequeue();
-        }
-        if (sceneData.roadMesh != null && sceneData.roadMaterial != null)
-        {
-            Graphics.DrawMeshInstanced(sceneData.roadMesh, 0, sceneData.roadMaterial, m_roadSpawnQueue.ToArray(), m_roadSpawnQueue.Count);
-        }
+        // while (m_roadSpawnQueue.Count > 0 && Vector3.Dot(m_roadSpawnQueue.Peek().GetPosition() - cameraTransform.position, cameraTransform.forward) < 0)
+        // {
+        //     m_roadSpawnQueue.Dequeue();
+        //     m_roadSampleQueue.Dequeue();
+        // }
+        // if (sceneData.roadMesh != null && sceneData.roadMaterial != null)
+        // {
+        //     if (m_roadSampleQueue.Count > 0)
+        //         m_landProperties.SetFloatArray("_Samples", m_roadSampleQueue.ToArray());
+        //     Graphics.DrawMeshInstanced(sceneData.roadMesh, 0, sceneData.roadMaterial, m_roadSpawnQueue.ToArray(), m_roadSpawnQueue.Count, m_landProperties);
+        // }
         for (int i = 0; i < sceneData.landDatas.Length; i++)
         {
             while (m_landSpawnQueues[i].Count > 0 && Vector3.Dot(m_landSpawnQueues[i].Peek().GetPosition() - cameraTransform.position, cameraTransform.forward) < 0)
@@ -70,7 +70,7 @@ public class MapManager : MonoBehaviour
             if (sceneData.landDatas[i].mesh != null && sceneData.landDatas[i].material != null)
             {
                 if (m_landSampleQueues[i].Count > 0)
-                    m_landProperties.SetFloatArray("_LandSamples", m_landSampleQueues[i].ToArray());
+                    m_landProperties.SetFloatArray("_Samples", m_landSampleQueues[i].ToArray());
                 Graphics.DrawMeshInstanced(sceneData.landDatas[i].mesh, 0, sceneData.landDatas[i].material, m_landSpawnQueues[i].ToArray(), m_landSpawnQueues[i].Count, m_landProperties);
             }
         }
@@ -87,66 +87,32 @@ public class MapManager : MonoBehaviour
         }
     }
 
-    void GenerateRoad()
-    {
-        if (sceneData.roadSpacing > 0)
-        {
-            while (m_roadDistance < RoadGenerator.GetRoadLength())
-            {
-                Quaternion rotation = Quaternion.Euler(sceneData.roadRotation);
-                if (m_random.NextBool())
-                {
-                    rotation *= Quaternion.Euler(0, 180, 0);
-                }
-                Matrix4x4 targetTransform = RoadGenerator.GetTransform(m_roadDistance);
-                m_roadSpawnQueue.Enqueue(targetTransform * Matrix4x4.TRS(Vector3.zero, rotation, sceneData.roadScale));
-                m_roadDistance += sceneData.roadSpacing;
-            }
-        }
-    }
-
     void GenerateLand()
     {
-        if (sceneData.landDatas.Length > 0)
+        for (int i = 0; i < m_landDistances.Length; i++)
         {
-            int landColIndex = 0;
-            for (int i = 1; i < RoadGenerator.LandCol; i++)
-            {
-                if (m_landDistances[i] / RoadGenerator.GetLandRatio(i) < m_landDistances[landColIndex] / RoadGenerator.GetLandRatio(landColIndex))
-                {
-                    landColIndex = i;
-                }
-            }
-            while (m_landDistances[landColIndex] < RoadGenerator.GetLandRatio(landColIndex) * RoadGenerator.GetRoadLength())
+            int landColIndex = i - CurveGenerator.ChildCol;
+            while (m_landDistances[i] < CurveGenerator.GetLength(landColIndex))
             {
                 int landMeshIndex = m_random.NextInt(0, sceneData.landDatas.Length);
-                // invalidate land col
-                while (!sceneData.landDatas[landMeshIndex].validateLandCol.Contains(landColIndex))
-                {
-                    landMeshIndex = m_random.NextInt(0, sceneData.landDatas.Length);
-                }
+                // valid land col
+                // while (!sceneData.landDatas[landMeshIndex].validateLandCol.Contains(landColIndex))
+                // {
+                //     landMeshIndex = m_random.NextInt(0, sceneData.landDatas.Length);
+                // }
+                m_landSampleQueues[landMeshIndex].Enqueue(audioManager.GetSample(m_landDistances[i] / levelManager.speed));
 
-                Matrix4x4 landTransform = RoadGenerator.GetXTransform(m_landDistances[landColIndex], landColIndex) * Matrix4x4.Scale(sceneData.landDatas[landMeshIndex].scale);
+                Matrix4x4 landTransform = CurveGenerator.GetTransform(m_landDistances[i], landColIndex) * Matrix4x4.Scale(sceneData.landDatas[landMeshIndex].scale);
                 Vector3 landSize = new Vector3(sceneData.landDatas[landMeshIndex].spacing, sceneData.landDatas[landMeshIndex].spacing, sceneData.landDatas[landMeshIndex].spacing);
                 if (sceneData.landDatas[landMeshIndex].mesh != null)
                 {
                     Vector3 meshBoundSize = sceneData.landDatas[landMeshIndex].mesh.bounds.size;
                     landSize = new Vector3(meshBoundSize.x * sceneData.landDatas[landMeshIndex].scale.x, meshBoundSize.y * sceneData.landDatas[landMeshIndex].scale.y, meshBoundSize.z * sceneData.landDatas[landMeshIndex].scale.z);
                     m_landSpawnQueues[landMeshIndex].Enqueue(landTransform);
-                    m_landSampleQueues[landMeshIndex].Enqueue(RoadGenerator.GetXSample(m_landDistances[landColIndex], landColIndex));
                 }
                 // generate items
                 GenerateItems(landTransform, landSize, sceneData.landDatas[landMeshIndex].heightMap, landMeshIndex);
-
-                // next col
-                m_landDistances[landColIndex] += sceneData.landDatas[landMeshIndex].spacing;
-                for (int i = 0; i < RoadGenerator.LandCol; i++)
-                {
-                    if (m_landDistances[i] < m_landDistances[landColIndex])
-                    {
-                        landColIndex = i;
-                    }
-                }
+                m_landDistances[i] += sceneData.landDatas[landMeshIndex].spacing;
             }
         }
     }

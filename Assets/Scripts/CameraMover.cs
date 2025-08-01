@@ -20,7 +20,7 @@ public class CameraMover : MonoBehaviour
         if (levelManager.isPlaying)
         {
             float currentTime = Time.time - levelManager.startTime;
-            Matrix4x4 targetTransform = RoadGenerator.GetTransform(currentTime * levelManager.speed);
+            Matrix4x4 targetTransform = CurveGenerator.GetTransform(currentTime * levelManager.speed, 0) * CurveGenerator.GetRotation(currentTime * levelManager.speed);
             transform.position = targetTransform.rotation * m_initPosition + targetTransform.GetPosition();
             transform.rotation = targetTransform.rotation * m_initRotation;
         }

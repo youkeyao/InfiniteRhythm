@@ -3,6 +3,7 @@ using UnityEngine;
 [System.Serializable]
 public struct LandData
 {
+    public Vector3 rotation;
     public Vector3 scale;
     public Mesh mesh;
     public Material material;
@@ -24,13 +25,6 @@ public struct ItemData
 [CreateAssetMenu(menuName = "SceneData")]
 public class SceneData : ScriptableObject
 {
-    // road
-    public float roadSpacing;
-    public Vector3 roadRotation;
-    public Vector3 roadScale = Vector3.one;
-    public Mesh roadMesh;
-    public Material roadMaterial;
-
     // land
     public LandData[] landDatas;
 

@@ -80,7 +80,7 @@ Shader "Custom/Spectrum"
             // -------------------------------------
             // Includes
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceInput.hlsl"
-            #define SAMPLE_NUM 32
+            #define SAMPLE_NUM 64
 
             UNITY_INSTANCING_BUFFER_START(UnityPerMaterial)
                 UNITY_DEFINE_INSTANCED_PROP(half4, _ColorA)
@@ -91,7 +91,6 @@ Shader "Custom/Spectrum"
                 UNITY_DEFINE_INSTANCED_PROP(half, _Cutoff)
                 UNITY_DEFINE_INSTANCED_PROP(half, _Surface)
                 UNITY_DEFINE_INSTANCED_PROP(half, _Emission)
-                UNITY_DEFINE_INSTANCED_PROP(float, _LandSamples)
             UNITY_INSTANCING_BUFFER_END(UnityPerMaterial)
             float _Spectrum[SAMPLE_NUM];
 
@@ -147,17 +146,25 @@ Shader "Custom/Spectrum"
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
 
-                float sample = abs(UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _LandSamples));
-                input.positionOS.y *= sample * 40;
-                input.positionOS.y += sample * 20;
-
                 float3 translation = TransformObjectToWorld(float3(0, 0, 0));
+                // float3 worldForward = TransformObjectToWorldDir(float3(0, 0, 1));
+                // float yRotation = atan2(worldForward.x, worldForward.z);
+                // float cosTheta = cos(yRotation);
+                // float sinTheta = sin(yRotation);
+                // float4x4 newTransform = {
+                //     cosTheta, 0, sinTheta, translation.x,
+                //     0,        1, 0,         translation.y,
+                //     -sinTheta, 0, cosTheta, translation.z,
+                //     0,        0, 0,         1
+                // };
+                // float4 worldPos = mul(newTransform, input.positionOS);
+                // output.positionCS = mul(UNITY_MATRIX_VP, worldPos);
                 float noiseScale = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _NoiseScale);
                 translation.y = 0;
                 float noiseRaw = PerlinNoise(translation * noiseScale);
-                int spectrumIndex = noiseRaw * SAMPLE_NUM;
-                float spectrum = _Spectrum[spectrumIndex] * 40;
-                input.positionOS.x *= spectrum + 1;
+                int spectrumIndex = noiseRaw * (SAMPLE_NUM - 6) + 6;
+                float spectrum = _Spectrum[spectrumIndex] * 200;
+                input.positionOS.y *= spectrum + 1;
                 output.positionCS = mul(UNITY_MATRIX_MVP, input.positionOS);
 
                 float4 colorA = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _ColorA);
