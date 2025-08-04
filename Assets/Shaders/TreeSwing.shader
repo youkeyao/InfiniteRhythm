@@ -136,7 +136,8 @@ Shader "Custom/TreeSwing"
 
                 // swing
                 float3 posOS = input.positionOS.xyz;
-                float3 windDirOS = TransformWorldToObjectDir(mul(UNITY_MATRIX_I_V, float4(float3(1, 0, 0), 0.0)).xyz);
+                float3 cameraForward = UNITY_MATRIX_I_V[2].xyz;
+                float3 windDirOS = cross(float3(0, 1, 0), cameraForward);
                 float partFactor = sqrt(posOS.x * posOS.x + posOS.z * posOS.z + posOS.y * posOS.y * posOS.y);
                 float finalDisplacement = _Swing * partFactor;
                 posOS += windDirOS * finalDisplacement;

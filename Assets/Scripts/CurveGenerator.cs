@@ -74,12 +74,17 @@ public struct BezierCurve
     public float S2T(float s)
     {
         const int NEWTON_SEGMENT = 4;
+        const float NEWTON_EPSILON = 1e-4f;
 
         s = Mathf.Clamp01(s);
         float t = s;
-        for (int i = 0; i < NEWTON_SEGMENT; i++)
+        int i;
+        for (i = 0; i < NEWTON_SEGMENT; i++)
         {
-            t = t - (T2S(t) - s) / T2SDer(t);
+            float delta = (T2S(t) - s) / T2SDer(t);
+            if (Mathf.Abs(delta) < NEWTON_EPSILON)
+                break;
+            t = t - delta;
         }
         return t;
     }
@@ -88,7 +93,7 @@ public struct BezierCurve
     {
         float t = S2T(s);
         Vector3 pos = A * t * t * t + B * t * t + C * t + D;
-        Vector3 direction = CalcDerivative(t);
+        Vector3 direction = CalcDerivative(t).normalized;
         return Matrix4x4.TRS(pos, Quaternion.LookRotation(direction), Vector3.one);
     }
 };
@@ -98,10 +103,10 @@ public static class CurveGenerator
     const int ControlPointCapacity = 20;
     public const int ChildCol = 2;
 
-    public static Vector2 curveSpacing = new Vector2(10, 20);
-    public static float baseSegmentLength = 30f;
+    public static Vector2 curveSpacing = new Vector2(-5, 25);
+    public static float baseSegmentLength = 100f;
     public static float slope = 5.0f;
-    public static float rotateAngle = 40.0f;
+    public static float rotateAngle = 20.0f;
     public static float rotateSpeed = 0.01f;
 
     static BezierCurve[,] s_curves = new BezierCurve[ChildCol * 2 + 1, ControlPointCapacity]; // curve i -> controlPoints[i] - > controlPoints[i + 1]
@@ -134,17 +139,16 @@ public static class CurveGenerator
         s_controlPoints = new ControlPoint[ControlPointCapacity];
 
         s_controlPoints[0] = new ControlPoint { position = Vector3.zero, direction = Vector3.forward };
-        Vector3 nextPosDirection = Quaternion.Euler(0, UnityEngine.Random.Range(-15.0f, 15.0f), 0) * Vector3.forward;
-        Vector3 nextPosition = baseSegmentLength * nextPosDirection;
-        Vector3 nextDirection = Quaternion.Euler(0, UnityEngine.Random.Range(-15.0f, 15.0f), 0) * Vector3.forward;
-        s_controlPoints[1] = new ControlPoint { position = nextPosition, direction = nextDirection };
-        s_controlPointsSize = 2;
 
         float L = baseSegmentLength / 3;
         Vector3 P0 = s_controlPoints[0].position;
         Vector3 P1 = P0 + s_controlPoints[0].direction * L;
-        Vector3 P3 = s_controlPoints[1].position;
-        Vector3 P2 = P3 - s_controlPoints[1].direction * L;
+        Vector3 P2 = P1 + Quaternion.Euler(0, UnityEngine.Random.Range(-15.0f, 15.0f), 0) * s_controlPoints[0].direction * L;
+        Vector3 nextDirection = Quaternion.Euler(0, UnityEngine.Random.Range(-15.0f, 15.0f), 0) * (P2 - P1).normalized;
+        Vector3 P3 = P2 + nextDirection * L;
+        s_controlPoints[1] = new ControlPoint { position = P3, direction = nextDirection };
+        s_controlPointsSize = 2;
+
         UpdateCurves(P0, P1, P2, P3);
 
         return s_controlPoints;
@@ -166,10 +170,9 @@ public static class CurveGenerator
         avgE /= samples.Length;
         Vector3 P0 = prevControlPoint.position;
         Vector3 P1 = P0 + prevControlPoint.direction * L;
-        Vector3 P2 = P0 + P0 - (prevprevControlPoint.position + prevControlPoint.direction * L);
-        Vector3 nextDirection = Quaternion.Euler(0, UnityEngine.Random.Range(-15.0f, 15.0f), 0) * (P2 - P1).normalized;
+        Vector3 P2 = prevprevControlPoint.position + prevprevControlPoint.direction * L + 4 * prevControlPoint.direction * L;
+        Vector3 nextDirection = Quaternion.Euler(0, UnityEngine.Random.Range(-45.0f, 45.0f), 0) * (P2 - P1).normalized;
         Vector3 P3 = P2 + nextDirection * L;
-        P3.y = avgE * slope;
 
         // remove head
         if (s_controlPointsSize == ControlPointCapacity)
@@ -237,17 +240,18 @@ public static class CurveGenerator
 
     public static Matrix4x4 GetTransform(float L, int landID)
     {
-        L = Mathf.Min(L, s_lengths[landID + ChildCol]);
+        int colIndex = landID + ChildCol;
+        L = Mathf.Min(L, s_lengths[colIndex]);
         // search segment
-        float nowL = s_lengths[landID + ChildCol];
+        float nowL = s_lengths[colIndex];
         for (int i = s_controlPointsSize - 2; i >= 0; i--)
         {
             int index = (s_controlPointsHead + i) % ControlPointCapacity;
-            nowL -= s_curves[landID + ChildCol, index].length;
-            if (nowL <= L)
+            nowL -= s_curves[colIndex, index].length;
+            if (nowL <= L || i == 0)
             {
-                float s = (L - nowL) / s_curves[landID + ChildCol, index].length;
-                return s_curves[landID + ChildCol, index].GetTransform(s);
+                float s = (L - nowL) / s_curves[colIndex, index].length;
+                return s_curves[colIndex, index].GetTransform(s);
             }
         }
         return Matrix4x4.identity;

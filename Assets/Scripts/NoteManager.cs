@@ -72,7 +72,7 @@ public class NoteManager : MonoBehaviour
             for (int i = 0; i < m_spawnList.Count; i++)
             {
                 Vector3 position = m_spawnList[i].GetPosition();
-                Matrix4x4 targetTransform = CurveGenerator.GetTransform(currentTime * levelManager.speed, 0);
+                Matrix4x4 targetTransform = CurveGenerator.GetTransform(currentTime * levelManager.speed, 0) * CurveGenerator.GetRotation(currentTime * levelManager.speed);
                 Vector3 targetPosition = targetTransform.GetPosition();
                 Vector3 targetDirection = targetTransform.MultiplyVector(Vector3.forward);
                 Vector3 trackDirection = targetTransform.MultiplyVector(Vector3.right);

@@ -92,6 +92,7 @@ Shader "Custom/NoiseSphere"
                 UNITY_DEFINE_INSTANCED_PROP(half, _Emission)
             UNITY_INSTANCING_BUFFER_END(UnityPerMaterial)
             float _Swing;
+            float _MaxSpectrum;
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Unlit.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -107,7 +108,6 @@ Shader "Custom/NoiseSphere"
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
-                float volume : TEXCOORD0;
                 float4 color : COLOR;
 
                 UNITY_VERTEX_INPUT_INSTANCE_ID
@@ -222,24 +222,24 @@ Shader "Custom/NoiseSphere"
 
                 float noiseScale = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _NoiseScale);
                 float4 cameraPos = mul(UNITY_MATRIX_MV, input.positionOS);
-                float spectrum = _Swing * 5;
-                float volume = PerlinNoise(cameraPos * noiseScale) * spectrum + 1;
-                input.positionOS.xyz *= volume;
-                input.positionOS.y += PerlinNoise(mul(UNITY_MATRIX_M, float4(0, 0, 0, 1))) * 10 + 10;
+                float translation = TransformObjectToWorld(float3(0, 0, 0));
+                float deform = PerlinNoise(cameraPos * noiseScale) * _MaxSpectrum * 6 + 1;
+                float posNoise = PerlinNoise(translation);
+                input.positionOS.xyz *= deform;
+                input.positionOS.y += posNoise * 10;
                 output.positionCS = mul(UNITY_MATRIX_MVP, input.positionOS);
-                output.volume = volume;
                 float4 colorA = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _ColorA);
                 float4 colorB = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _ColorB);
                 float4 colorC = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _ColorC);
                 float s = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _SegmentPoint);
-                float noiseRaw = PerlinNoise(mul(UNITY_MATRIX_M, float4(0, 0, 0, 1))) * spectrum;
-                if (noiseRaw < s)
+                posNoise *= (_Swing * 5 + 1) / 2;
+                if (posNoise < s)
                 {
-                    output.color = lerp(colorA, colorB, noiseRaw / s) * volume;
+                    output.color = lerp(colorA, colorB, posNoise / s) * deform;
                 }
                 else
                 {
-                    output.color = lerp(colorB, colorC, (noiseRaw - s) / (1 - s)) * volume;
+                    output.color = lerp(colorB, colorC, (posNoise - s) / (1 - s)) * deform;
                 }
 
                 return output;

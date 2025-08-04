@@ -17,7 +17,7 @@ public class AudioManager : MonoBehaviour
     const int NumSpectrumSample = 1024;
 
     public LevelManager levelManager;
-    public int bufferSize = 15;
+    public int bufferSize = 10;
     public int sampleRate = 48000;
     public int numChannels = 2;
 
@@ -52,7 +52,6 @@ public class AudioManager : MonoBehaviour
         m_webSocket.OnOpen += () =>
         {
             Debug.Log("WebSocket Opened!");
-            Setup();
         };
         m_webSocket.OnError += (e) => Debug.Log("WebSocket Error: " + e);
         m_webSocket.OnClose += (e) =>
@@ -73,7 +72,7 @@ public class AudioManager : MonoBehaviour
         await m_webSocket.Connect();
     }
 
-    async void Setup()
+    public async void Setup()
     {
         await m_webSocket.SendText("{\"setup\": {\"model\": \"models/lyria-realtime-exp\"}}");
         // SetWeightedPrompts("synthwave", 1.0f);
@@ -185,6 +184,11 @@ public class AudioManager : MonoBehaviour
             // control generation speed
             if (m_audioClips.Count > bufferSize)
             {
+                if (!levelManager.isPlaying)
+                {
+                    levelManager.isPlaying = true;
+                    levelManager.startTime = Time.time;
+                }
                 Pause();
             }
             else if (m_audioClips.Count < bufferSize)

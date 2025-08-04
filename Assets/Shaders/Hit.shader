@@ -107,29 +107,6 @@ Shader "Custom/Hit"
                 UNITY_VERTEX_OUTPUT_STEREO
             };
 
-            float2 RandomVec(float2 uv)
-            {
-                float vec = dot(uv, float2(127.1, 311.7));
-                return -1.0 + 2.0 * frac(sin(vec) * 43758.5453123);
-            }
-
-            float PerlinNoise(float2 uv) 
-            {				
-                float2 pi = floor(uv);
-                float2 pf = uv - pi;
-                float2 w = pf * pf * (3.0 - 2.0 *  pf);
-
-                float2 lerp1 = lerp(
-                    dot(RandomVec(pi + float2(0.0, 0.0)), pf - float2(0.0, 0.0)),
-                    dot(RandomVec(pi + float2(1.0, 0.0)), pf - float2(1.0, 0.0)), w.x);
-                            
-                float2 lerp2 = lerp(
-                    dot(RandomVec(pi + float2(0.0, 1.0)), pf - float2(0.0, 1.0)),
-                    dot(RandomVec(pi + float2(1.0, 1.0)), pf - float2(1.0, 1.0)), w.x);
-                    
-                return lerp(lerp1, lerp2, w.y);
-            }
-
             // -----------------------------------------------
 
             Varyings UnlitPassVertex(Attributes input)

@@ -1,10 +1,12 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 
 public class LevelManager : MonoBehaviour
 {
     public float speed = 10.0f;
 
+    public AudioManager audioManager;
     public GameObject playButton;
 
     public KeyCode[] keyCodes = new KeyCode[]
@@ -25,8 +27,7 @@ public class LevelManager : MonoBehaviour
 
     public void Play()
     {
-        isPlaying = true;
-        startTime = Time.time;
+        audioManager.Setup();
         playButton.SetActive(false);
     }
 }

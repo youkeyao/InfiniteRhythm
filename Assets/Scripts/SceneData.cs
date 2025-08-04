@@ -3,6 +3,7 @@ using UnityEngine;
 [System.Serializable]
 public struct LandData
 {
+    public Vector3 offset;
     public Vector3 rotation;
     public Vector3 scale;
     public Mesh mesh;

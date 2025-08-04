@@ -13,6 +13,7 @@ public class MapManager : MonoBehaviour
 
     // private variables
     float[] m_landDistances;
+    List<List<int>> m_landValidMesh = new List<List<int>>();
     List<Queue<float>> m_landSampleQueues = new List<Queue<float>>();
     List<Queue<Matrix4x4>> m_landSpawnQueues = new List<Queue<Matrix4x4>>();
     List<Queue<Matrix4x4>> m_itemSpawnQueues = new List<Queue<Matrix4x4>>();
@@ -24,15 +25,20 @@ public class MapManager : MonoBehaviour
     {
         m_random = new Unity.Mathematics.Random(0x12345678);
         m_landProperties = new MaterialPropertyBlock();
-        for (int i = 0; i < sceneData.landDatas.Length; i++)
-        {
-            m_landSpawnQueues.Add(new Queue<Matrix4x4>());
-            m_landSampleQueues.Add(new Queue<float>());
-        }
         m_landDistances = new float[CurveGenerator.ChildCol * 2 + 1];
         for (int i = 0; i < CurveGenerator.ChildCol * 2 + 1; i++)
         {
             m_landDistances[i] = 0;
+            m_landValidMesh.Add(new List<int>());
+        }
+        for (int i = 0; i < sceneData.landDatas.Length; i++)
+        {
+            m_landSpawnQueues.Add(new Queue<Matrix4x4>());
+            m_landSampleQueues.Add(new Queue<float>());
+            for (int j = 0; j < sceneData.landDatas[i].validateLandCol.Length; j++)
+            {
+                m_landValidMesh[sceneData.landDatas[i].validateLandCol[j] + CurveGenerator.ChildCol].Add(i);
+            }
         }
         for (int i = 0; i < sceneData.itemDatas.Length; i++)
         {
@@ -49,17 +55,6 @@ public class MapManager : MonoBehaviour
         }
 
         // Dispose & Draw
-        // while (m_roadSpawnQueue.Count > 0 && Vector3.Dot(m_roadSpawnQueue.Peek().GetPosition() - cameraTransform.position, cameraTransform.forward) < 0)
-        // {
-        //     m_roadSpawnQueue.Dequeue();
-        //     m_roadSampleQueue.Dequeue();
-        // }
-        // if (sceneData.roadMesh != null && sceneData.roadMaterial != null)
-        // {
-        //     if (m_roadSampleQueue.Count > 0)
-        //         m_landProperties.SetFloatArray("_Samples", m_roadSampleQueue.ToArray());
-        //     Graphics.DrawMeshInstanced(sceneData.roadMesh, 0, sceneData.roadMaterial, m_roadSpawnQueue.ToArray(), m_roadSpawnQueue.Count, m_landProperties);
-        // }
         for (int i = 0; i < sceneData.landDatas.Length; i++)
         {
             while (m_landSpawnQueues[i].Count > 0 && Vector3.Dot(m_landSpawnQueues[i].Peek().GetPosition() - cameraTransform.position, cameraTransform.forward) < 0)
@@ -92,17 +87,13 @@ public class MapManager : MonoBehaviour
         for (int i = 0; i < m_landDistances.Length; i++)
         {
             int landColIndex = i - CurveGenerator.ChildCol;
-            while (m_landDistances[i] < CurveGenerator.GetLength(landColIndex))
+            while (m_landDistances[i] < CurveGenerator.GetLength(landColIndex) && m_landValidMesh[i].Count > 0)
             {
-                int landMeshIndex = m_random.NextInt(0, sceneData.landDatas.Length);
-                // valid land col
-                // while (!sceneData.landDatas[landMeshIndex].validateLandCol.Contains(landColIndex))
-                // {
-                //     landMeshIndex = m_random.NextInt(0, sceneData.landDatas.Length);
-                // }
+                int landMeshIndex = m_landValidMesh[i][m_random.NextInt(0, m_landValidMesh[i].Count)];
                 m_landSampleQueues[landMeshIndex].Enqueue(audioManager.GetSample(m_landDistances[i] / levelManager.speed));
 
-                Matrix4x4 landTransform = CurveGenerator.GetTransform(m_landDistances[i], landColIndex) * Matrix4x4.Scale(sceneData.landDatas[landMeshIndex].scale);
+                Matrix4x4 offsetTransform = Matrix4x4.TRS(sceneData.landDatas[landMeshIndex].offset, Quaternion.Euler(sceneData.landDatas[landMeshIndex].rotation), sceneData.landDatas[landMeshIndex].scale);
+                Matrix4x4 landTransform = CurveGenerator.GetTransform(m_landDistances[i], landColIndex) * offsetTransform;
                 Vector3 landSize = new Vector3(sceneData.landDatas[landMeshIndex].spacing, sceneData.landDatas[landMeshIndex].spacing, sceneData.landDatas[landMeshIndex].spacing);
                 if (sceneData.landDatas[landMeshIndex].mesh != null)
                 {
