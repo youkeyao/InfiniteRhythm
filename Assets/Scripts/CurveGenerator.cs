@@ -125,15 +125,6 @@ public static class CurveGenerator
 
     }
 
-    public static float GetCurveRatio(int col)
-    {
-        if (col < -ChildCol || col > ChildCol)
-        {
-            return 0;
-        }
-        return s_lengths[col + ChildCol] / s_lengths[ChildCol];
-    }
-
     static ControlPoint[] InitializeControlPoints()
     {
         s_controlPoints = new ControlPoint[ControlPointCapacity];
@@ -154,7 +145,7 @@ public static class CurveGenerator
         return s_controlPoints;
     }
 
-    public static void GenerateNextControlPoint(float[] samples)
+    public static void GenerateNextControlPoint()
     {
         int prevprevIndex = (s_controlPointsHead + s_controlPointsSize - 2) % ControlPointCapacity;
         int prevIndex = (s_controlPointsHead + s_controlPointsSize - 1) % ControlPointCapacity;
@@ -162,16 +153,16 @@ public static class CurveGenerator
         ControlPoint prevControlPoint = s_controlPoints[prevIndex];
 
         float L = baseSegmentLength / 3;
-        float avgE = 0;
-        foreach (float sample in samples)
-        {
-            avgE += sample;
-        }
-        avgE /= samples.Length;
+        // float avgE = 0;
+        // foreach (float sample in samples)
+        // {
+        //     avgE += sample;
+        // }
+        // avgE /= samples.Length;
         Vector3 P0 = prevControlPoint.position;
         Vector3 P1 = P0 + prevControlPoint.direction * L;
         Vector3 P2 = prevprevControlPoint.position + prevprevControlPoint.direction * L + 4 * prevControlPoint.direction * L;
-        Vector3 nextDirection = Quaternion.Euler(0, UnityEngine.Random.Range(-45.0f, 45.0f), 0) * (P2 - P1).normalized;
+        Vector3 nextDirection = Quaternion.Euler(0, UnityEngine.Random.Range(-25.0f, 25.0f), 0) * (P2 - P1).normalized;
         Vector3 P3 = P2 + nextDirection * L;
 
         // remove head

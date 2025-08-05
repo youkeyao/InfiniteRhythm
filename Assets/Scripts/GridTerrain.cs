@@ -9,23 +9,13 @@ public class GridTerrain : MonoBehaviour
     public Material material;
     public int size;
     public int range;
-    public GameObject fogPlane;
 
-    Matrix4x4[] m_spawnQueues;
+    Matrix4x4[] m_instances;
 
     void Start()
     {
         int w = range * 2 + 1;
-        m_spawnQueues = new Matrix4x4[w * w];
-    }
-
-    void Update()
-    {
-        Vector3 pos = transform.position;
-        fogPlane.transform.position = new Vector3(pos.x, fogPlane.transform.position.y, pos.z);
-        int x = (int)pos.x / size;
-        int z = (int)pos.z / size;
-        int count = 0;
+        Queue<Matrix4x4> spawnQueue = new Queue<Matrix4x4>();
         int range2 = range * range;
         for (int i = -range; i <= range; i++)
         {
@@ -34,10 +24,24 @@ public class GridTerrain : MonoBehaviour
             {
                 if (i * i + j * j <= range2)
                 {
-                    m_spawnQueues[count++] = Matrix4x4.TRS(offset + new Vector3((x + i) * size, 0, (z + j) * size), Quaternion.identity, scale);
+                    spawnQueue.Enqueue(Matrix4x4.TRS(offset + new Vector3(i * size, 0, j * size), Quaternion.identity, scale));
                 }
             }
         }
-        Graphics.DrawMeshInstanced(mesh, 0, material, m_spawnQueues, count);
+        m_instances = spawnQueue.ToArray();
+
+        Mesh newMesh = new Mesh();
+        newMesh.vertices = mesh.vertices;
+        newMesh.triangles = mesh.triangles;
+        newMesh.uv = mesh.uv;
+        mesh = newMesh;
+    }
+
+    void Update()
+    {
+        material.SetInt("_GridX", ((int)transform.position.x) / size * size);
+        material.SetInt("_GridZ", ((int)transform.position.z) / size * size);
+        mesh.bounds = new Bounds(transform.position, new Vector3(1, 1, 1));
+        Graphics.DrawMeshInstanced(mesh, 0, material, m_instances, m_instances.Length);
     }
 }

@@ -5,9 +5,10 @@ using UnityEngine;
 public class LevelManager : MonoBehaviour
 {
     public float speed = 10.0f;
+    public float showDistance = 100.0f;
 
     public AudioManager audioManager;
-    public GameObject playButton;
+    public GameObject startUI;
 
     public KeyCode[] keyCodes = new KeyCode[]
     {
@@ -18,16 +19,53 @@ public class LevelManager : MonoBehaviour
     };
     public int NumTracks => keyCodes.Length;
 
-    [HideInInspector] public bool isPlaying = false;
-    [HideInInspector] public float startTime = 0;
+    public bool IsPlaying => m_isPlaying;
+    public float StartTime => m_startTime;
+
+    bool m_isPlaying = false;
+    bool m_isConnecting = false;
+    float m_startTime = 0;
 
     void Start()
     {
     }
 
+    void Update()
+    {
+        if (m_isConnecting)
+        {
+            if (audioManager.IsReady)
+            {
+                m_isConnecting = false;
+                Play();
+            }
+        }
+
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            if (Time.timeScale == 0)
+            {
+                Time.timeScale = 1;
+                m_isPlaying = true;
+            }
+            else
+            {
+                Time.timeScale = 0;
+                m_isPlaying = false;
+            }
+        }
+    }
+
     public void Play()
     {
-        audioManager.Setup();
-        playButton.SetActive(false);
+        m_isPlaying = true;
+        m_startTime = Time.time;
+        startUI.SetActive(false);
+    }
+
+    public void PlayInfinite()
+    {
+        audioManager.Connect();
+        m_isConnecting = true;
     }
 }

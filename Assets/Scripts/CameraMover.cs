@@ -17,9 +17,9 @@ public class CameraMover : MonoBehaviour
 
     void Update()
     {
-        if (levelManager.isPlaying)
+        if (levelManager.IsPlaying)
         {
-            float currentTime = Time.time - levelManager.startTime;
+            float currentTime = Time.time - levelManager.StartTime;
             Matrix4x4 targetTransform = CurveGenerator.GetTransform(currentTime * levelManager.speed, 0) * CurveGenerator.GetRotation(currentTime * levelManager.speed);
             transform.position = targetTransform.rotation * m_initPosition + targetTransform.GetPosition();
             transform.rotation = targetTransform.rotation * m_initRotation;

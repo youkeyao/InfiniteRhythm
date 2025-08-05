@@ -21,6 +21,8 @@ public class AudioManager : MonoBehaviour
     public int sampleRate = 48000;
     public int numChannels = 2;
 
+    public bool IsReady => m_isSetup && m_audioClips.Count > bufferSize;
+
     Dictionary<string, float> m_weightedPrompts = new Dictionary<string, float>();
     float m_temperature = 1.0f;
     int m_bpm = 90;
@@ -37,7 +39,7 @@ public class AudioManager : MonoBehaviour
     float m_maxSpectrum = 0;
     float[] m_spectrum = new float[NumSpectrumSample];
 
-    async void Start()
+    void Start()
     {
         m_audioSource = this.gameObject.AddComponent<AudioSource>();
 
@@ -52,12 +54,13 @@ public class AudioManager : MonoBehaviour
         m_webSocket.OnOpen += () =>
         {
             Debug.Log("WebSocket Opened!");
+            Setup();
         };
         m_webSocket.OnError += (e) => Debug.Log("WebSocket Error: " + e);
         m_webSocket.OnClose += (e) =>
         {
             Debug.Log("WebSocket Closed: " + e);
-            levelManager.isPlaying = false;
+            m_isSetup = false;
         };
         m_webSocket.OnMessage += (bytes) =>
         {
@@ -69,23 +72,41 @@ public class AudioManager : MonoBehaviour
                 ReceiveAudio(Convert.FromBase64String(dataToken.ToString()));
             }
         };
-        await m_webSocket.Connect();
     }
 
-    public async void Setup()
+    public void Connect()
     {
-        await m_webSocket.SendText("{\"setup\": {\"model\": \"models/lyria-realtime-exp\"}}");
-        // SetWeightedPrompts("synthwave", 1.0f);
-        SetWeightedPrompts("chillwave", 1.0f);
-        SetWeightedPrompts("Bossa Nova", 1.0f);
-        // SetWeightedPrompts("Drum and Bass", 0.8f);
-        // SetWeightedPrompts("Post Punk", 1.0f);
-        // SetWeightedPrompts("Shoegaze", 0.5f);
-        // SetWeightedPrompts("Funk", 1.0f);
-        // SetWeightedPrompts("Chiptune", 1.0f);
-        // SetWeightedPrompts("Lush Strings", 1.0f);
-        SetMusicGenerationConfig(m_temperature, m_bpm);
-        m_isSetup = true;
+        if (m_webSocket.State != WebSocketState.Open)
+        {
+            m_webSocket.Connect();
+        }
+    }
+
+    public void Close()
+    {
+        if (m_webSocket.State == WebSocketState.Open)
+        {
+            m_webSocket.Close();
+        }
+    }
+
+    async void Setup()
+    {
+        if (!m_isSetup)
+        {
+            await m_webSocket.SendText("{\"setup\": {\"model\": \"models/lyria-realtime-exp\"}}");
+            // SetWeightedPrompts("synthwave", 1.0f);
+            SetWeightedPrompts("chillwave", 1.0f);
+            SetWeightedPrompts("Bossa Nova", 1.0f);
+            // SetWeightedPrompts("Drum and Bass", 0.8f);
+            // SetWeightedPrompts("Post Punk", 1.0f);
+            // SetWeightedPrompts("Shoegaze", 0.5f);
+            // SetWeightedPrompts("Funk", 1.0f);
+            // SetWeightedPrompts("Chiptune", 1.0f);
+            // SetWeightedPrompts("Lush Strings", 1.0f);
+            SetMusicGenerationConfig(m_temperature, m_bpm);
+            m_isSetup = true;
+        }
     }
 
     private async void SendWeightedPrompts()
@@ -167,12 +188,6 @@ public class AudioManager : MonoBehaviour
         m_audioLength += audioClip.length;
         m_audioClips.Enqueue(audioClip);
         m_audioDatas.Add(new AudioData { samples = samples, time = m_audioLength });
-
-        // generate curve
-        while (CurveGenerator.GetLength(0) < m_audioLength * levelManager.speed)
-        {
-            CurveGenerator.GenerateNextControlPoint(samples);
-        }
     }
 
     void Update()
@@ -184,11 +199,6 @@ public class AudioManager : MonoBehaviour
             // control generation speed
             if (m_audioClips.Count > bufferSize)
             {
-                if (!levelManager.isPlaying)
-                {
-                    levelManager.isPlaying = true;
-                    levelManager.startTime = Time.time;
-                }
                 Pause();
             }
             else if (m_audioClips.Count < bufferSize)
@@ -197,33 +207,37 @@ public class AudioManager : MonoBehaviour
             }
         }
 
-        if (levelManager.isPlaying && !m_audioSource.isPlaying)
+        if (levelManager.IsPlaying && !m_audioSource.isPlaying)
         {
             // unpause
-            if (!m_audioSource.isPlaying)
-                m_audioSource.UnPause();
+            m_audioSource.UnPause();
             // finished, play next clip
             if ((m_audioSource.clip == null || !m_audioSource.isPlaying) && m_audioClips.Count > 0)
             {
                 m_audioSource.clip = m_audioClips.Dequeue();
                 m_audioSource.Play();
             }
-            else
-            {
-                levelManager.isPlaying = false;
-            }
         }
-        else if (!levelManager.isPlaying && m_audioSource.isPlaying)
+        else if (!levelManager.IsPlaying && m_audioSource.isPlaying)
         {
             // pause
             m_audioSource.Pause();
         }
 
+        // generate curve
+        while (CurveGenerator.GetLength(0) < m_audioLength * levelManager.speed + levelManager.showDistance)
+        {
+            CurveGenerator.GenerateNextControlPoint();
+        }
+
         // update spectrum
-        m_audioSource.GetSpectrumData(m_spectrum, 0, FFTWindow.BlackmanHarris);
-        Shader.SetGlobalFloatArray("_Spectrum", m_spectrum);
-        m_maxSpectrum = m_spectrum.Max();
-        Shader.SetGlobalFloat("_MaxSpectrum", m_maxSpectrum);
+        if (levelManager.IsPlaying)
+        {
+            m_audioSource.GetSpectrumData(m_spectrum, 0, FFTWindow.BlackmanHarris);
+            Shader.SetGlobalFloatArray("_Spectrum", m_spectrum);
+            m_maxSpectrum = m_spectrum.Max();
+            Shader.SetGlobalFloat("_MaxSpectrum", m_maxSpectrum);
+        }
     }
 
     async void Play()

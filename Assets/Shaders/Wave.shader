@@ -2,16 +2,17 @@ Shader "Custom/Wave"
 {
     Properties
     {
+        [MainTexture] _BaseMap("Texture", 2D) = "white" {}
         [MainColor] _BaseColor("Color", Color) = (1, 1, 1, 1)
         _PeakColor("Color", Color) = (1, 1, 1, 1)
         _NoiseScale ("Noise Scale", Float) = 1.0
+        _Emission("__emission", Float) = 0.0
         _Cutoff("AlphaCutout", Range(0.0, 1.0)) = 0.5
 
         // BlendMode
         _Surface("__surface", Float) = 0.0
         _Blend("__mode", Float) = 0.0
         _Cull("__cull", Float) = 2.0
-        _Emission("__emission", Float) = 0.0
         [ToggleUI] _AlphaClip("__clip", Float) = 0.0
         [HideInInspector] _BlendOp("__blendop", Float) = 0.0
         [HideInInspector] _SrcBlend("__src", Float) = 1.0
@@ -23,6 +24,11 @@ Shader "Custom/Wave"
 
         // Editmode props
         _QueueOffset("Queue offset", Float) = 0.0
+
+        // ObsoleteProperties
+        [HideInInspector] _MainTex("BaseMap", 2D) = "white" {}
+        [HideInInspector] _Color("Base Color", Color) = (0.5, 0.5, 0.5, 1)
+        [HideInInspector] _SampleGI("SampleGI", float) = 0.0 // needed from bakedlit
     }
 
     SubShader
@@ -90,6 +96,8 @@ Shader "Custom/Wave"
                 float _Emission;
             CBUFFER_END
             float _Beat;
+            int _GridX;
+            int _GridZ;
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Unlit.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -222,17 +230,21 @@ Shader "Custom/Wave"
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
 
-                // float3 translation = mul(UNITY_MATRIX_MV, float4(0, 0, 0, 1));
-                float3 translation = mul(UNITY_MATRIX_M, float4(0, 0, 0, 1));
+                float3 translation = TransformObjectToWorld(float3(0, 0, 0));
+                translation.x += _GridX;
+                translation.z += _GridZ;
                 float noiseRaw = PerlinNoise(translation * _NoiseScale);
-                input.positionOS.y += noiseRaw * _Beat * 10;
 
-                VertexPositionInputs vertexInput = GetVertexPositionInputs(input.positionOS.xyz);
-                output.positionCS = vertexInput.positionCS;
+                float4 positionWS = mul(UNITY_MATRIX_M, input.positionOS);
+                positionWS.x += _GridX;
+                positionWS.z += _GridZ;
+                positionWS.y += noiseRaw * _Beat * 10;
+                float4 positionVS = mul(UNITY_MATRIX_V, positionWS);
+                output.positionCS = mul(UNITY_MATRIX_P, positionVS);
                 output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
                 output.noise = noiseRaw;
                 #if defined(_FOG_FRAGMENT)
-                output.fogCoord = vertexInput.positionVS.z;
+                output.fogCoord = positionVS.z;
                 #else
                 output.fogCoord = ComputeFogFactor(vertexInput.positionCS.z);
                 #endif
@@ -261,6 +273,12 @@ Shader "Custom/Wave"
                 #endif
 
                 half4 finalColor = UniversalFragmentUnlit(inputData, color, alpha);
+
+                #if defined(_SCREEN_SPACE_OCCLUSION) && !defined(_SURFACE_TYPE_TRANSPARENT)
+                    float2 normalizedScreenSpaceUV = GetNormalizedScreenSpaceUV(input.positionCS);
+                    AmbientOcclusionFactor aoFactor = GetScreenSpaceAmbientOcclusion(normalizedScreenSpaceUV);
+                    finalColor.rgb *= aoFactor.directAmbientOcclusion;
+                #endif
                 #if defined(_FOG_FRAGMENT)
                 #if (defined(FOG_LINEAR) || defined(FOG_EXP) || defined(FOG_EXP2))
                     float viewZ = -input.fogCoord;
@@ -272,8 +290,9 @@ Shader "Custom/Wave"
                 #else
                     half fogFactor = input.fogCoord;
                 #endif
-                finalColor.rgb = lerp(finalColor.rgb, _PeakColor.rgb, input.noise * _Beat) * (1 + _Emission);
-                finalColor.rgb = MixFog(finalColor.rgb, fogFactor);
+
+                finalColor = lerp(finalColor, _PeakColor, clamp(input.noise * _Beat * 2, 0, 1));
+                finalColor.rgb = MixFog(finalColor.rgb, fogFactor) * (1 + _Emission);
                 finalColor.a = OutputAlpha(finalColor.a, IsSurfaceTypeTransparent(_Surface));
 
                 return finalColor;
@@ -323,4 +342,7 @@ Shader "Custom/Wave"
             ENDHLSL
         }
     }
+
+    // FallBack "Hidden/Universal Render Pipeline/FallbackError"
+    // CustomEditor "UnityEditor.Rendering.Universal.ShaderGUI.UnlitShader"
 }

@@ -49,7 +49,7 @@ public class MapManager : MonoBehaviour
     void Update()
     {
         // generate map
-        if (levelManager.isPlaying)
+        if (levelManager.IsPlaying)
         {
             GenerateLand();
         }
@@ -84,26 +84,35 @@ public class MapManager : MonoBehaviour
 
     void GenerateLand()
     {
-        for (int i = 0; i < m_landDistances.Length; i++)
+        int flag = 0;
+        while (flag != m_landDistances.Length)
         {
-            int landColIndex = i - CurveGenerator.ChildCol;
-            while (m_landDistances[i] < CurveGenerator.GetLength(landColIndex) && m_landValidMesh[i].Count > 0)
+            flag = 0;
+            for (int i = 0; i < m_landDistances.Length; i++)
             {
-                int landMeshIndex = m_landValidMesh[i][m_random.NextInt(0, m_landValidMesh[i].Count)];
-                m_landSampleQueues[landMeshIndex].Enqueue(audioManager.GetSample(m_landDistances[i] / levelManager.speed));
-
-                Matrix4x4 offsetTransform = Matrix4x4.TRS(sceneData.landDatas[landMeshIndex].offset, Quaternion.Euler(sceneData.landDatas[landMeshIndex].rotation), sceneData.landDatas[landMeshIndex].scale);
-                Matrix4x4 landTransform = CurveGenerator.GetTransform(m_landDistances[i], landColIndex) * offsetTransform;
-                Vector3 landSize = new Vector3(sceneData.landDatas[landMeshIndex].spacing, sceneData.landDatas[landMeshIndex].spacing, sceneData.landDatas[landMeshIndex].spacing);
-                if (sceneData.landDatas[landMeshIndex].mesh != null)
+                int landColIndex = i - CurveGenerator.ChildCol;
+                if (m_landDistances[i] < CurveGenerator.GetLength(landColIndex) && m_landValidMesh[i].Count > 0)
                 {
-                    Vector3 meshBoundSize = sceneData.landDatas[landMeshIndex].mesh.bounds.size;
-                    landSize = new Vector3(meshBoundSize.x * sceneData.landDatas[landMeshIndex].scale.x, meshBoundSize.y * sceneData.landDatas[landMeshIndex].scale.y, meshBoundSize.z * sceneData.landDatas[landMeshIndex].scale.z);
-                    m_landSpawnQueues[landMeshIndex].Enqueue(landTransform);
+                    int landMeshIndex = m_landValidMesh[i][m_random.NextInt(0, m_landValidMesh[i].Count)];
+                    m_landSampleQueues[landMeshIndex].Enqueue(audioManager.GetSample(m_landDistances[i] / levelManager.speed));
+
+                    Matrix4x4 offsetTransform = Matrix4x4.TRS(sceneData.landDatas[landMeshIndex].offset, Quaternion.Euler(sceneData.landDatas[landMeshIndex].rotation), sceneData.landDatas[landMeshIndex].scale);
+                    Matrix4x4 landTransform = CurveGenerator.GetTransform(m_landDistances[i], landColIndex) * offsetTransform;
+                    Vector3 landSize = new Vector3(sceneData.landDatas[landMeshIndex].spacing, sceneData.landDatas[landMeshIndex].spacing, sceneData.landDatas[landMeshIndex].spacing);
+                    if (sceneData.landDatas[landMeshIndex].mesh != null)
+                    {
+                        Vector3 meshBoundSize = sceneData.landDatas[landMeshIndex].mesh.bounds.size;
+                        landSize = new Vector3(meshBoundSize.x * sceneData.landDatas[landMeshIndex].scale.x, meshBoundSize.y * sceneData.landDatas[landMeshIndex].scale.y, meshBoundSize.z * sceneData.landDatas[landMeshIndex].scale.z);
+                        m_landSpawnQueues[landMeshIndex].Enqueue(landTransform);
+                    }
+                    // generate items
+                    GenerateItems(landTransform, landSize, sceneData.landDatas[landMeshIndex].heightMap, landMeshIndex);
+                    m_landDistances[i] += sceneData.landDatas[landMeshIndex].spacing;
                 }
-                // generate items
-                GenerateItems(landTransform, landSize, sceneData.landDatas[landMeshIndex].heightMap, landMeshIndex);
-                m_landDistances[i] += sceneData.landDatas[landMeshIndex].spacing;
+                else
+                {
+                    flag++;
+                }
             }
         }
     }
