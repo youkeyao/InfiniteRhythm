@@ -223,7 +223,7 @@ Shader "Custom/NoiseSphere"
                 float noiseScale = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _NoiseScale);
                 float4 cameraPos = mul(UNITY_MATRIX_MV, input.positionOS);
                 float translation = TransformObjectToWorld(float3(0, 0, 0));
-                float deform = PerlinNoise(cameraPos * noiseScale) * _MaxSpectrum * 6 + 1;
+                float deform = PerlinNoise(cameraPos * noiseScale) * _MaxSpectrum * 4 + 1;
                 float posNoise = PerlinNoise(translation);
                 input.positionOS.xyz *= deform;
                 input.positionOS.y += posNoise * 10;

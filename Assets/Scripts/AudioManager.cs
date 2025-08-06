@@ -29,7 +29,6 @@ public class AudioManager : MonoBehaviour
 
     AudioSource m_audioSource;
     Queue<AudioClip> m_audioClips = new Queue<AudioClip>();
-    List<AudioData> m_audioDatas = new List<AudioData>();
     Queue<Note> m_chart = new Queue<Note>();
     string m_wsurl = "wss://generativelanguage.googleapis.com//ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateMusic?key=AIzaSyBE_WpYLV2beN9E52AUsGTjzjs82_DVT_I";
     WebSocket m_webSocket;
@@ -177,7 +176,6 @@ public class AudioManager : MonoBehaviour
             }
         }
         audioClip.SetData(samples, 0);
-        // RoadGenerator.GenerateNextControlPoint(samples, samples.Length / (numChannels * sampleRate) * levelManager.speed);
 
         // generate chart
         List<Note> chart = ChartGenerator.GetChart(samples, sampleRate, m_audioLength, levelManager.NumTracks);
@@ -187,7 +185,21 @@ public class AudioManager : MonoBehaviour
         }
         m_audioLength += audioClip.length;
         m_audioClips.Enqueue(audioClip);
-        m_audioDatas.Add(new AudioData { samples = samples, time = m_audioLength });
+    }
+
+    public void AddAudioClip(AudioClip audioClip)
+    {
+        float[] samples = new float[audioClip.samples * audioClip.channels];
+        audioClip.GetData(samples, 0);
+
+        // generate chart
+        List<Note> chart = ChartGenerator.GetChart(samples, audioClip.frequency, m_audioLength, levelManager.NumTracks);
+        foreach (Note note in chart)
+        {
+            m_chart.Enqueue(note);
+        }
+        m_audioLength += audioClip.length;
+        m_audioClips.Enqueue(audioClip);
     }
 
     void Update()
@@ -212,10 +224,18 @@ public class AudioManager : MonoBehaviour
             // unpause
             m_audioSource.UnPause();
             // finished, play next clip
-            if ((m_audioSource.clip == null || !m_audioSource.isPlaying) && m_audioClips.Count > 0)
+            if (m_audioSource.clip == null || !m_audioSource.isPlaying)
             {
-                m_audioSource.clip = m_audioClips.Dequeue();
-                m_audioSource.Play();
+                if (m_audioClips.Count > 0)
+                {
+                    m_audioSource.clip = m_audioClips.Dequeue();
+                    m_audioSource.Play();
+                }
+                else
+                {
+                    levelManager.Stop();
+                    m_chart.Clear();
+                }
             }
         }
         else if (!levelManager.IsPlaying && m_audioSource.isPlaying)
@@ -225,7 +245,8 @@ public class AudioManager : MonoBehaviour
         }
 
         // generate curve
-        while (CurveGenerator.GetLength(0) < m_audioLength * levelManager.speed + levelManager.showDistance)
+        float currentTime = Time.time - levelManager.StartTime;
+        while (CurveGenerator.GetLength(0) < currentTime * levelManager.speed + levelManager.showDistance)
         {
             CurveGenerator.GenerateNextControlPoint();
         }
@@ -265,22 +286,5 @@ public class AudioManager : MonoBehaviour
             m_isGenerating = false;
             await m_webSocket.SendText("{\"playbackControl\": \"PAUSE\"}");
         }
-    }
-    
-    public float GetSample(float time)
-    {
-        if (time < m_audioLength)
-        {
-            float lastTime = 0;
-            for (int i = 0; i < m_audioDatas.Count; i++)
-            {
-                if (time < m_audioDatas[i].time)
-                {
-                    return m_audioDatas[i].samples[(int)((time - lastTime) / (m_audioDatas[i].time - lastTime) * m_audioDatas[i].samples.Length)];
-                }
-                lastTime = m_audioDatas[i].time;
-            }
-        }
-        return 0;
     }
 }

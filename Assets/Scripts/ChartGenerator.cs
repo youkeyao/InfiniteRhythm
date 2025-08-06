@@ -14,8 +14,9 @@ public static class ChartGenerator
 
     public static float step = 0.2f;
     public static int windowSize = 1024;
-    public static int moveLength = 2048;
+    public static int moveLength = 1024;
     public static float sensitivity = 1.0f;
+    public static float restTime = 1;
 
     static float[] s_energyHistory = new float[HistorySize];
     static int s_historyIndex = -1;
@@ -27,7 +28,6 @@ public static class ChartGenerator
     public static List<Note> GetChart(float[] samples, int sampleRate, float timeOffset, int numTracks)
     {
         s_notes.Clear();
-        bool isInitialized = s_historyIndex >= 0;
 
         NativeArray<float> segment = new NativeArray<float>(windowSize, Allocator.TempJob);
         for (int sampleIndex = 0; sampleIndex < samples.Length; sampleIndex += moveLength)
@@ -41,7 +41,9 @@ public static class ChartGenerator
                 energy += sample * sample;
             }
             energy /= windowSize;
-            if (isInitialized)
+            
+            float currentTime = (float)(sampleIndex + windowSize / 2) / sampleRate / 2 + timeOffset;
+            if (currentTime > restTime)
             {
                 float average = 0;
                 for (int j = 0; j < HistorySize; j++)
@@ -58,13 +60,12 @@ public static class ChartGenerator
                 variance /= HistorySize;
 
                 float C = 1.5142857f - variance / average / average * 0.025714f;
-                float currentTime = (float)sampleIndex / sampleRate / 2 + timeOffset;
                 if (energy > sensitivity * C * average && currentTime - s_lastTime > step)
                 {
                     s_notes.Add(new Note
                     {
                         time = currentTime,
-                        track = Mathf.Abs(energy - s_lastEnergy) > C * variance ? Random.Range(0, numTracks) : s_lastTrack
+                        track = Mathf.Abs(energy - s_lastEnergy) > 10 * variance ? Random.Range(0, numTracks) : s_lastTrack
                     });
                     s_lastTrack = s_notes[s_notes.Count - 1].track;
                     s_lastEnergy = energy;

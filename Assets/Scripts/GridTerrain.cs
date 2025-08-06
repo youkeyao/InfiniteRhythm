@@ -14,7 +14,6 @@ public class GridTerrain : MonoBehaviour
 
     void Start()
     {
-        int w = range * 2 + 1;
         Queue<Matrix4x4> spawnQueue = new Queue<Matrix4x4>();
         int range2 = range * range;
         for (int i = -range; i <= range; i++)
@@ -39,9 +38,11 @@ public class GridTerrain : MonoBehaviour
 
     void Update()
     {
-        material.SetInt("_GridX", ((int)transform.position.x) / size * size);
-        material.SetInt("_GridZ", ((int)transform.position.z) / size * size);
-        mesh.bounds = new Bounds(transform.position, new Vector3(1, 1, 1));
+        int gridX = (int)transform.position.x / size * size;
+        int gridZ = (int)transform.position.z / size * size;
+        material.SetInt("_GridX", gridX);
+        material.SetInt("_GridZ", gridZ);
+        mesh.bounds = new Bounds(new Vector3(gridX, 0, gridZ) + offset, new Vector3(range, 1, range));
         Graphics.DrawMeshInstanced(mesh, 0, material, m_instances, m_instances.Length);
     }
 }

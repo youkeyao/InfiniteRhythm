@@ -291,7 +291,7 @@ Shader "Custom/Wave"
                     half fogFactor = input.fogCoord;
                 #endif
 
-                finalColor = lerp(finalColor, _PeakColor, clamp(input.noise * _Beat * 2, 0, 1));
+                finalColor = lerp(finalColor, _PeakColor, clamp(input.noise * _Beat, 0, 1));
                 finalColor.rgb = MixFog(finalColor.rgb, fogFactor) * (1 + _Emission);
                 finalColor.a = OutputAlpha(finalColor.a, IsSurfaceTypeTransparent(_Surface));
 

@@ -1,6 +1,8 @@
 using System.Collections.Generic;
-using System.Threading.Tasks;
+using System.IO;
 using UnityEngine;
+using TMPro;
+using UnityEngine.Networking;
 
 public class LevelManager : MonoBehaviour
 {
@@ -8,7 +10,13 @@ public class LevelManager : MonoBehaviour
     public float showDistance = 100.0f;
 
     public AudioManager audioManager;
+    public MapManager mapManager;
+    public NoteManager noteManager;
     public GameObject startUI;
+    public GameObject loadingUI;
+
+    public SceneData[] scenes;
+    public TMP_Dropdown levelDropDown;
 
     public KeyCode[] keyCodes = new KeyCode[]
     {
@@ -28,6 +36,8 @@ public class LevelManager : MonoBehaviour
 
     void Start()
     {
+        PopulateDropdown();
+        loadingUI.SetActive(false);
     }
 
     void Update()
@@ -37,7 +47,9 @@ public class LevelManager : MonoBehaviour
             if (audioManager.IsReady)
             {
                 m_isConnecting = false;
-                Play();
+                m_isPlaying = true;
+                m_startTime = Time.time;
+                loadingUI.SetActive(false);
             }
         }
 
@@ -58,14 +70,80 @@ public class LevelManager : MonoBehaviour
 
     public void Play()
     {
-        m_isPlaying = true;
-        m_startTime = Time.time;
         startUI.SetActive(false);
+        loadingUI.SetActive(true);
+        StartCoroutine(LoadAudio());
+        noteManager.Init();
     }
 
     public void PlayInfinite()
     {
         audioManager.Connect();
         m_isConnecting = true;
+        startUI.SetActive(false);
+        loadingUI.SetActive(true);
+        noteManager.Init();
+    }
+
+    public void Stop()
+    {
+        m_isPlaying = false;
+        startUI.SetActive(true);
+        CurveGenerator.Clear();
+        mapManager.CLear();
+        noteManager.Clear();
+    }
+
+    void PopulateDropdown()
+    {
+        levelDropDown.ClearOptions();
+
+        string streamingAssetsPath = Application.streamingAssetsPath;
+        string[] subDirectories = Directory.GetDirectories(streamingAssetsPath);
+
+        List<string> directoryNames = new List<string>();
+        foreach (string dirPath in subDirectories)
+        {
+            string dirName = Path.GetFileName(dirPath);
+            directoryNames.Add(dirName);
+        }
+
+        levelDropDown.AddOptions(directoryNames);
+
+        levelDropDown.value = 0;
+        levelDropDown.RefreshShownValue();
+    }
+
+    IEnumerator<UnityWebRequestAsyncOperation> LoadAudio()
+    {
+        string dirPath = Path.Combine(Application.streamingAssetsPath, levelDropDown.options[levelDropDown.value].text);
+        string audioFile = Directory.GetFiles(dirPath)[0];
+        int sceneIndex = int.Parse(Path.GetFileNameWithoutExtension(audioFile));
+        mapManager.sceneData = scenes[sceneIndex];
+
+        using (UnityWebRequest www = UnityWebRequestMultimedia.GetAudioClip(audioFile, AudioType.UNKNOWN))
+        {
+            yield return www.SendWebRequest();
+
+            if (www.result == UnityWebRequest.Result.ConnectionError || www.result == UnityWebRequest.Result.ProtocolError)
+            {
+                Debug.LogError(www.error);
+                yield break;
+            }
+
+            AudioClip audioClip = DownloadHandlerAudioClip.GetContent(www);
+
+            if (audioClip == null)
+            {
+                Debug.LogError("Invalid audio!");
+                yield break;
+            }
+
+            audioManager.AddAudioClip(audioClip);
+        }
+
+        m_isPlaying = true;
+        m_startTime = Time.time;
+        loadingUI.SetActive(false);
     }
 }

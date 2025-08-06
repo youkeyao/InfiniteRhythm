@@ -14,17 +14,27 @@ public class MapManager : MonoBehaviour
     // private variables
     float[] m_landDistances;
     List<List<int>> m_landValidMesh = new List<List<int>>();
-    List<Queue<float>> m_landSampleQueues = new List<Queue<float>>();
     List<Queue<Matrix4x4>> m_landSpawnQueues = new List<Queue<Matrix4x4>>();
     List<Queue<Matrix4x4>> m_itemSpawnQueues = new List<Queue<Matrix4x4>>();
 
-    MaterialPropertyBlock m_landProperties;
     Unity.Mathematics.Random m_random;
+
+    public void CLear()
+    {
+        for (int i = 0; i < m_landSpawnQueues.Count; i++)
+        {
+            m_landSpawnQueues[i].Clear();
+            m_itemSpawnQueues[i].Clear();
+        }
+        for (int i = 0; i < CurveGenerator.ChildCol * 2 + 1; i++)
+        {
+            m_landDistances[i] = 0;
+        }
+    }
 
     void Start()
     {
         m_random = new Unity.Mathematics.Random(0x12345678);
-        m_landProperties = new MaterialPropertyBlock();
         m_landDistances = new float[CurveGenerator.ChildCol * 2 + 1];
         for (int i = 0; i < CurveGenerator.ChildCol * 2 + 1; i++)
         {
@@ -34,7 +44,6 @@ public class MapManager : MonoBehaviour
         for (int i = 0; i < sceneData.landDatas.Length; i++)
         {
             m_landSpawnQueues.Add(new Queue<Matrix4x4>());
-            m_landSampleQueues.Add(new Queue<float>());
             for (int j = 0; j < sceneData.landDatas[i].validateLandCol.Length; j++)
             {
                 m_landValidMesh[sceneData.landDatas[i].validateLandCol[j] + CurveGenerator.ChildCol].Add(i);
@@ -60,13 +69,10 @@ public class MapManager : MonoBehaviour
             while (m_landSpawnQueues[i].Count > 0 && Vector3.Dot(m_landSpawnQueues[i].Peek().GetPosition() - cameraTransform.position, cameraTransform.forward) < 0)
             {
                 m_landSpawnQueues[i].Dequeue();
-                m_landSampleQueues[i].Dequeue();
             }
             if (sceneData.landDatas[i].mesh != null && sceneData.landDatas[i].material != null)
             {
-                if (m_landSampleQueues[i].Count > 0)
-                    m_landProperties.SetFloatArray("_Samples", m_landSampleQueues[i].ToArray());
-                Graphics.DrawMeshInstanced(sceneData.landDatas[i].mesh, 0, sceneData.landDatas[i].material, m_landSpawnQueues[i].ToArray(), m_landSpawnQueues[i].Count, m_landProperties);
+                Graphics.DrawMeshInstanced(sceneData.landDatas[i].mesh, 0, sceneData.landDatas[i].material, m_landSpawnQueues[i].ToArray(), m_landSpawnQueues[i].Count);
             }
         }
         for (int i = 0; i < sceneData.itemDatas.Length; i++)
@@ -94,7 +100,6 @@ public class MapManager : MonoBehaviour
                 if (m_landDistances[i] < CurveGenerator.GetLength(landColIndex) && m_landValidMesh[i].Count > 0)
                 {
                     int landMeshIndex = m_landValidMesh[i][m_random.NextInt(0, m_landValidMesh[i].Count)];
-                    m_landSampleQueues[landMeshIndex].Enqueue(audioManager.GetSample(m_landDistances[i] / levelManager.speed));
 
                     Matrix4x4 offsetTransform = Matrix4x4.TRS(sceneData.landDatas[landMeshIndex].offset, Quaternion.Euler(sceneData.landDatas[landMeshIndex].rotation), sceneData.landDatas[landMeshIndex].scale);
                     Matrix4x4 landTransform = CurveGenerator.GetTransform(m_landDistances[i], landColIndex) * offsetTransform;

@@ -2,7 +2,6 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
-using UnityEngine.UI;
 
 public class NoteManager : MonoBehaviour
 {
@@ -16,6 +15,7 @@ public class NoteManager : MonoBehaviour
     public Vector3 noteRotation = new Vector3(0, 0, 0);
     public Mesh noteMesh;
     public Material noteMaterial;
+    public GameObject noteEffect;
 
     // road
     public Material roadMaterial;
@@ -42,8 +42,11 @@ public class NoteManager : MonoBehaviour
     List<Mesh> m_lineMesh = new List<Mesh>();
     Queue<Vector3> m_roadVertices = new Queue<Vector3>();
     List<Queue<Vector3>> m_lineVertices = new List<Queue<Vector3>>();
+    List<MaterialPropertyBlock> m_linePropertyBlock = new List<MaterialPropertyBlock>();
 
-    void Init()
+    MaterialPropertyBlock m_propertyBlock;
+
+    public void Init()
     {
         float spacing = -transform.position.x * 2 / (levelManager.NumTracks - 1);
         for (int i = 0; i < levelManager.NumTracks; i++)
@@ -60,43 +63,41 @@ public class NoteManager : MonoBehaviour
         {
             m_lineMesh.Add(new Mesh());
             m_lineVertices.Add(new Queue<Vector3>());
+            m_linePropertyBlock.Add(new MaterialPropertyBlock());
         }
+        m_propertyBlock = new MaterialPropertyBlock();
+    }
+
+    public void Clear()
+    {
+        for (int i = 0; i < m_hitHints.Count; i++)
+        {
+            Destroy(m_hitHints[i]);
+        }
+        m_hitHints.Clear();
+        m_noteSpawnTime.Clear();
+        m_noteSpawnList.Clear();
+        m_roadVertices.Clear();
+        m_roadDistance = 0;
+        m_lineMesh.Clear();
+        m_lineVertices.Clear();
+        m_linePropertyBlock.Clear();
     }
 
     public void Update()
     {
         if (levelManager.IsPlaying)
         {
-            if (!m_isInit)
-            {
-                Init();
-                m_isInit = true;
-            }
-
             GenerateRoad();
             GenerateNote();
             HitNote();
-        }
-        else
-        {
-            if (m_isInit)
-            {
-                m_isInit = false;
-                for (int i = 0; i < m_hitHints.Count; i++)
-                {
-                    Destroy(m_hitHints[i]);
-                }
-                m_hitHints.Clear();
-                m_noteSpawnTime.Clear();
-                m_noteSpawnList.Clear();
-            }
         }
 
         // Draw
         Graphics.DrawMesh(m_roadMesh, Matrix4x4.identity, roadMaterial, 0);
         for (int i = 0; i < m_lineMesh.Count; i++)
         {
-            Graphics.DrawMesh(m_lineMesh[i], Matrix4x4.identity, lineMaterial, 0);
+            Graphics.DrawMesh(m_lineMesh[i], Matrix4x4.identity, lineMaterial, 0, null, 0, m_linePropertyBlock[i]);
         }
         Graphics.DrawMeshInstanced(noteMesh, 0, noteMaterial, m_noteSpawnList.ToArray(), m_noteSpawnList.Count);
     }
@@ -176,7 +177,7 @@ public class NoteManager : MonoBehaviour
 
         // Spawn
         Queue<Note> chart = audioManager.GetChart();
-        while (chart.Count > 0)
+        while (chart.Count > 0 && chart.Peek().time * levelManager.speed < CurveGenerator.GetLength(0))
         {
             Note note = chart.Dequeue();
             Vector3 offset = new Vector3(note.track * spacing, 0, 0);
@@ -208,10 +209,14 @@ public class NoteManager : MonoBehaviour
                     Vector3 trackPosition = targetPosition + targetTransform.MultiplyVector(Vector3.right * (transform.position.x + j * spacing));
                     if (Input.GetKeyDown(levelManager.keyCodes[j]) && Mathf.Abs(Vector3.Dot(trackPosition - position, trackDirection)) < m_trackThreshold)
                     {
+                        StartCoroutine(ShakeRoutine(j));
+                        GameObject effect = Instantiate(noteEffect, position, m_noteSpawnList[i].rotation * Quaternion.LookRotation(new Vector3(0, 0, 1)));
+                        ParticleSystem ps = noteEffect.GetComponentInChildren<ParticleSystem>();
+                        Destroy(effect, ps.main.duration + ps.main.startLifetime.constantMax);
+
                         m_noteSpawnTime.RemoveAt(i);
                         m_noteSpawnList.RemoveAt(i);
                         i--;
-                        StartCoroutine(ShakeRoutine(j));
                     }
                 }
             }
@@ -222,6 +227,7 @@ public class NoteManager : MonoBehaviour
     {
         float elapsed = 0f;
         Vector3 initialPosition = m_hitHints[trackID].transform.localPosition;
+        Renderer renderer = m_hitHints[trackID].GetComponentInChildren<Renderer>();
         while (elapsed < hitShakeDuration)
         {
             elapsed += Time.deltaTime;
@@ -231,6 +237,13 @@ public class NoteManager : MonoBehaviour
             float z = 0;
 
             m_hitHints[trackID].transform.localPosition = initialPosition + new Vector3(x, y, z);
+
+            // hit color
+            float hitStrength = 4 * elapsed / hitShakeDuration - 4 * elapsed * elapsed / hitShakeDuration / hitShakeDuration;
+            renderer.GetPropertyBlock(m_propertyBlock);
+            m_propertyBlock.SetFloat("_Hit", hitStrength);
+            renderer.SetPropertyBlock(m_propertyBlock);
+            m_linePropertyBlock[trackID].SetFloat("_Hit", hitStrength);
 
             yield return null;
         }

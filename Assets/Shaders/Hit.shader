@@ -4,6 +4,7 @@ Shader "Custom/Hit"
     {
         [MainTexture] _BaseMap("Texture", 2D) = "white" {}
         [MainColor] _BaseColor("Color", Color) = (1, 1, 1, 1)
+        _HitColor("Hit Color", Color) = (1, 1, 1, 1)
         _Cutoff("AlphaCutout", Range(0.0, 1.0)) = 0.5
 
         // BlendMode
@@ -83,8 +84,10 @@ Shader "Custom/Hit"
             CBUFFER_START(UnityPerMaterial)
                 float4 _BaseMap_ST;
                 half4 _BaseColor;
+                half4 _HitColor;
                 half _Cutoff;
                 half _Surface;
+                float _Hit;
             CBUFFER_END
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Unlit.hlsl"
@@ -130,8 +133,9 @@ Shader "Custom/Hit"
 
                 half2 uv = input.uv;
                 half4 texColor = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv);
-                half3 color = texColor.rgb * _BaseColor.rgb;
-                half alpha = texColor.a * _BaseColor.a;
+                half4 baseColor = lerp(_BaseColor, _HitColor, _Hit);
+                half3 color = texColor.rgb * baseColor.rgb;
+                half alpha = texColor.a * baseColor.a;
 
                 alpha = AlphaDiscard(alpha, _Cutoff);
                 color = AlphaModulate(color, alpha);

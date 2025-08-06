@@ -122,7 +122,16 @@ public static class CurveGenerator
             return 0;
         }
         return s_lengths[col + ChildCol];
+    }
 
+    public static void Clear()
+    {
+        s_controlPointsHead = 0;
+        s_controlPointsSize = 2;
+        for (int i = 0; i < ChildCol * 2 + 1; i++)
+        {
+            s_lengths[i] = 0;
+        }
     }
 
     static ControlPoint[] InitializeControlPoints()
