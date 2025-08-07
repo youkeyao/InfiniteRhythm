@@ -33,8 +33,9 @@ public class LevelManager : MonoBehaviour
 
     bool m_isPlaying = false;
     bool m_isConnecting = false;
-    float m_startTime = 0;
-    Queue<MapManager> m_mapManagers = new Queue<MapManager>();
+    float m_startTime = -1;
+    int m_sceneIndex = 0;
+    MapManager m_mapManager;
 
     bool isTmp = false;
 
@@ -51,7 +52,7 @@ public class LevelManager : MonoBehaviour
             if (audioManager.IsReady)
             {
                 m_isConnecting = false;
-                Ready(UnityEngine.Random.Range(0, scenes.Length));
+                Ready();
             }
         }
 
@@ -70,18 +71,6 @@ public class LevelManager : MonoBehaviour
                 pauseUI.SetActive(true);
             }
         }
-
-        if (Time.time - m_startTime > 5 && !isTmp)
-        {
-            //     MapManager mapManager = this.AddComponent<MapManager>();
-            //     mapManager.SetSceneData(scenes[1]);
-            //     mapManager.levelManager = this;
-            //     mapManager.cameraTransform = noteManager.cameraTransform;
-            //     m_mapManagers.Enqueue(mapManager);
-            m_mapManagers.Peek().EraseMap();
-            isTmp = true;
-        }
-        
     }
 
     void Init()
@@ -90,20 +79,15 @@ public class LevelManager : MonoBehaviour
         pauseUI.SetActive(false);
         loadingUI.SetActive(true);
         noteManager.Init();
+        ChangeScene();
     }
 
-    void Ready(int sceneIndex)
+    void Ready()
     {
         Time.timeScale = 1;
         m_isPlaying = true;
         m_startTime = Time.time;
         loadingUI.SetActive(false);
-
-        MapManager mapManager = this.AddComponent<MapManager>();
-        mapManager.SetSceneData(scenes[sceneIndex]);
-        mapManager.levelManager = this;
-        mapManager.cameraTransform = noteManager.cameraTransform;
-        m_mapManagers.Enqueue(mapManager);
     }
 
     public void Play()
@@ -126,12 +110,30 @@ public class LevelManager : MonoBehaviour
         pauseUI.SetActive(false);
         CurveGenerator.Clear();
         ChartGenerator.Clear();
-        foreach (MapManager mapManager in m_mapManagers)
-        {
-            Destroy(mapManager);
-        }
+        Destroy(m_mapManager);
+        m_mapManager = null;
         noteManager.Clear();
         audioManager.Clear();
+    }
+
+    public void ChangeScene()
+    {
+        int newSceneIndex = UnityEngine.Random.Range(0, scenes.Length);
+        while (scenes.Length > 1 && newSceneIndex == m_sceneIndex)
+        {
+            newSceneIndex = UnityEngine.Random.Range(0, scenes.Length);
+        }
+
+        m_sceneIndex = newSceneIndex;
+        if (m_mapManager != null)
+        {
+            m_mapManager.EraseMap();
+            Destroy(m_mapManager, 1);
+        }
+        m_mapManager = this.AddComponent<MapManager>();
+        m_mapManager.SetSceneData(scenes[m_sceneIndex]);
+        m_mapManager.levelManager = this;
+        m_mapManager.cameraTransform = noteManager.cameraTransform;
     }
 
     void PopulateDropdown()
@@ -158,7 +160,6 @@ public class LevelManager : MonoBehaviour
     {
         string dirPath = Path.Combine(Application.streamingAssetsPath, levelDropDown.options[levelDropDown.value].text);
         string audioFile = Directory.GetFiles(dirPath)[0];
-        int sceneIndex = int.Parse(Path.GetFileNameWithoutExtension(audioFile));
 
         using (UnityWebRequest www = UnityWebRequestMultimedia.GetAudioClip(audioFile, AudioType.UNKNOWN))
         {
@@ -181,6 +182,6 @@ public class LevelManager : MonoBehaviour
             audioManager.AddAudioClip(audioClip);
         }
 
-        Ready(sceneIndex);
+        Ready();
     }
 }

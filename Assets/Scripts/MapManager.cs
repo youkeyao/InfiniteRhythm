@@ -17,12 +17,14 @@ public class MapManager : MonoBehaviour
     List<Queue<Matrix4x4>> m_landSpawnQueues = new List<Queue<Matrix4x4>>();
     List<Queue<Matrix4x4>> m_itemSpawnQueues = new List<Queue<Matrix4x4>>();
 
+    MaterialPropertyBlock m_propertyBlock;
     Unity.Mathematics.Random m_random;
 
     void Start()
     {
         m_landDistances = new float[CurveGenerator.ChildCol * 2 + 1];
         m_random = new Unity.Mathematics.Random(0x12345678);
+        m_propertyBlock = new MaterialPropertyBlock();
         for (int i = 0; i < CurveGenerator.ChildCol * 2 + 1; i++)
         {
             m_landDistances[i] = 0;
@@ -57,18 +59,24 @@ public class MapManager : MonoBehaviour
 
     void Update()
     {
-        // generate map
         if (levelManager.IsPlaying)
         {
+            // generate curve
+            float currentTime = Time.time - levelManager.StartTime;
+            while (CurveGenerator.GetLength(0) < currentTime * levelManager.speed + levelManager.showDistance)
+            {
+                CurveGenerator.GenerateNextControlPoint();
+            }
+            // generate map
             GenerateLand();
         }
 
         // Dispose & Draw
         if (m_sceneData != null)
         {
-            float clip = (Time.time - m_startTime) * 100;
-            Shader.SetGlobalFloat("_Clip", clip * clip);
-            Shader.SetGlobalFloat("_ClipSign", m_clipSign);
+            float clip = (Time.time - m_startTime) * levelManager.showDistance;
+            m_propertyBlock.SetFloat("_Clip", clip * clip);
+            m_propertyBlock.SetFloat("_ClipSign", m_clipSign);
             for (int i = 0; i < m_sceneData.landDatas.Length; i++)
             {
                 while (m_landSpawnQueues[i].Count > 0 && Vector3.Dot(m_landSpawnQueues[i].Peek().GetPosition() - cameraTransform.position, cameraTransform.forward) < 0)
@@ -77,7 +85,7 @@ public class MapManager : MonoBehaviour
                 }
                 if (m_sceneData.landDatas[i].mesh != null && m_sceneData.landDatas[i].material != null)
                 {
-                    Graphics.DrawMeshInstanced(m_sceneData.landDatas[i].mesh, 0, m_sceneData.landDatas[i].material, m_landSpawnQueues[i].ToArray(), m_landSpawnQueues[i].Count);
+                    Graphics.DrawMeshInstanced(m_sceneData.landDatas[i].mesh, 0, m_sceneData.landDatas[i].material, m_landSpawnQueues[i].ToArray(), m_landSpawnQueues[i].Count, m_propertyBlock);
                 }
             }
             for (int i = 0; i < m_sceneData.itemDatas.Length; i++)
@@ -88,7 +96,7 @@ public class MapManager : MonoBehaviour
                 }
                 if (m_sceneData.itemDatas[i].mesh != null && m_sceneData.itemDatas[i].material != null)
                 {
-                    Graphics.DrawMeshInstanced(m_sceneData.itemDatas[i].mesh, 0, m_sceneData.itemDatas[i].material, m_itemSpawnQueues[i].ToArray(), m_itemSpawnQueues[i].Count);
+                    Graphics.DrawMeshInstanced(m_sceneData.itemDatas[i].mesh, 0, m_sceneData.itemDatas[i].material, m_itemSpawnQueues[i].ToArray(), m_itemSpawnQueues[i].Count, m_propertyBlock);
                 }
             }
         }

@@ -1159,7 +1159,7 @@ MonoBehaviour:
   roadSpacing: 5
   roadY: -0.2
   hitThreshold: 1.5
-  hitEffectDuration: 0.1
+  hitEffectDuration: 0.15
 --- !u!1001 &572089053
 PrefabInstance:
   m_ObjectHideFlags: 0

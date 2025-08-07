@@ -17,9 +17,10 @@ public class AudioManager : MonoBehaviour
     const int NumSpectrumSample = 512;
 
     public LevelManager levelManager;
-    public int bufferSize = 10;
+    public int bufferSize = 5;
     public int sampleRate = 48000;
     public int numChannels = 2;
+    public int changeSceneFreq = 2;
 
     public bool IsReady => m_isSetup && m_audioClips.Count > bufferSize;
 
@@ -36,6 +37,7 @@ public class AudioManager : MonoBehaviour
     bool m_isGenerating = false;
     float m_maxSpectrum = 0;
     float[] m_spectrum = new float[NumSpectrumSample];
+    int m_clipCount = 0;
 
     void Start()
     {
@@ -216,6 +218,12 @@ public class AudioManager : MonoBehaviour
                 {
                     m_audioSource.clip = m_audioClips.Dequeue();
                     m_audioSource.Play();
+                    m_clipCount++;
+                    if (m_clipCount >= changeSceneFreq)
+                    {
+                        m_clipCount = 0;
+                        levelManager.ChangeScene();
+                    }
                 }
                 else
                 {
@@ -231,13 +239,6 @@ public class AudioManager : MonoBehaviour
 
         if (levelManager.IsPlaying)
         {
-            // generate curve
-            float currentTime = Time.time - levelManager.StartTime;
-            while (CurveGenerator.GetLength(0) < currentTime * levelManager.speed + levelManager.showDistance)
-            {
-                CurveGenerator.GenerateNextControlPoint();
-            }
-
             // update spectrum
             m_audioSource.GetSpectrumData(m_spectrum, 0, FFTWindow.BlackmanHarris);
             Shader.SetGlobalFloatArray("_Spectrum", m_spectrum);
@@ -249,6 +250,7 @@ public class AudioManager : MonoBehaviour
     public void Clear()
     {
         m_audioLength = 0;
+        m_clipCount = 0;
         m_audioClips.Clear();
         m_audioSource.clip = null;
     }
