@@ -80,7 +80,7 @@ Shader "Custom/Spectrum"
             // -------------------------------------
             // Includes
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceInput.hlsl"
-            #define SAMPLE_NUM 64
+            #define SAMPLE_NUM 32
 
             UNITY_INSTANCING_BUFFER_START(UnityPerMaterial)
                 UNITY_DEFINE_INSTANCED_PROP(half4, _ColorA)
@@ -92,6 +92,8 @@ Shader "Custom/Spectrum"
                 UNITY_DEFINE_INSTANCED_PROP(half, _Surface)
                 UNITY_DEFINE_INSTANCED_PROP(half, _Emission)
             UNITY_INSTANCING_BUFFER_END(UnityPerMaterial)
+            float _Clip;
+            float _ClipSign;
             float _Spectrum[SAMPLE_NUM];
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Unlit.hlsl"
@@ -107,6 +109,7 @@ Shader "Custom/Spectrum"
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
+                float cameraDist : TEXCOORD1;
                 float4 color : COLOR;
 
                 UNITY_VERTEX_INPUT_INSTANCE_ID
@@ -221,11 +224,14 @@ Shader "Custom/Spectrum"
 
                 float3 translation = TransformObjectToWorld(float3(0, 0, 0));
                 float noiseScale = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _NoiseScale);
-                float noiseRaw = PerlinNoise(translation * noiseScale);
-                int spectrumIndex = noiseRaw * (SAMPLE_NUM - 6) + 6;
+                float noiseRaw = PerlinNoise(translation * noiseScale) + 0.5;
+                int spectrumIndex = noiseRaw * (SAMPLE_NUM - 1);
                 float spectrum = _Spectrum[spectrumIndex] * 200;
                 input.positionOS.y *= spectrum + 1;
+
                 output.positionCS = mul(UNITY_MATRIX_MVP, input.positionOS);
+                float3 cameraPos = mul(UNITY_MATRIX_MV, input.positionOS);
+                output.cameraDist = dot(cameraPos, cameraPos);
 
                 float4 colorA = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _ColorA);
                 float4 colorB = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _ColorB);
@@ -247,6 +253,8 @@ Shader "Custom/Spectrum"
             {
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+                
+                clip(_ClipSign * (_Clip - input.cameraDist));
 
                 half3 color = input.color.rgb;
                 half alpha = input.color.a;

@@ -17,18 +17,31 @@ public static class ChartGenerator
     public static int moveLength = 1024;
     public static float sensitivity = 1.0f;
     public static float restTime = 1;
+    public static float energyThreshold = 1e-2f;
 
     static float[] s_energyHistory = new float[HistorySize];
     static int s_historyIndex = -1;
     static int s_lastTrack = 0;
     static float s_lastEnergy = 0;
     static float s_lastTime = 0;
-    static List<Note> s_notes = new List<Note>();
-
-    public static List<Note> GetChart(float[] samples, int sampleRate, float timeOffset, int numTracks)
+    static Queue<Note> s_notes = new Queue<Note>();
+    
+    public static void Clear()
     {
+        s_historyIndex = -1;
+        s_lastTrack = 0;
+        s_lastEnergy = 0;
+        s_lastTime = 0;
         s_notes.Clear();
+    }
 
+    public static Queue<Note> GetChart()
+    {
+        return s_notes;
+    }
+
+    public static void Generate(float[] samples, int sampleRate, float timeOffset, int numTracks)
+    {
         NativeArray<float> segment = new NativeArray<float>(windowSize, Allocator.TempJob);
         for (int sampleIndex = 0; sampleIndex < samples.Length; sampleIndex += moveLength)
         {
@@ -41,8 +54,8 @@ public static class ChartGenerator
                 energy += sample * sample;
             }
             energy /= windowSize;
-            
-            float currentTime = (float)(sampleIndex + windowSize / 2) / sampleRate / 2 + timeOffset;
+
+            float currentTime = (float)(sampleIndex + windowSize) / sampleRate / 2 + timeOffset;
             if (currentTime > restTime)
             {
                 float average = 0;
@@ -60,14 +73,15 @@ public static class ChartGenerator
                 variance /= HistorySize;
 
                 float C = 1.5142857f - variance / average / average * 0.025714f;
-                if (energy > sensitivity * C * average && currentTime - s_lastTime > step)
+                if (energy > energyThreshold && energy > sensitivity * C * average && currentTime - s_lastTime > step)
                 {
-                    s_notes.Add(new Note
+                    int track = Mathf.Abs(energy - s_lastEnergy) > 10 * variance ? Random.Range(0, numTracks) : s_lastTrack;
+                    s_notes.Enqueue(new Note
                     {
                         time = currentTime,
-                        track = Mathf.Abs(energy - s_lastEnergy) > 10 * variance ? Random.Range(0, numTracks) : s_lastTrack
+                        track = track
                     });
-                    s_lastTrack = s_notes[s_notes.Count - 1].track;
+                    s_lastTrack = track;
                     s_lastEnergy = energy;
                     s_lastTime = currentTime;
                 }
@@ -77,7 +91,5 @@ public static class ChartGenerator
             s_energyHistory[s_historyIndex] = energy;
         }
         segment.Dispose();
-
-        return s_notes;
     }
 }

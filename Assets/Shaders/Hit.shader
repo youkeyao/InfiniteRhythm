@@ -88,6 +88,7 @@ Shader "Custom/Hit"
                 half _Cutoff;
                 half _Surface;
                 float _Hit;
+                float _Emission;
             CBUFFER_END
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Unlit.hlsl"
@@ -133,7 +134,7 @@ Shader "Custom/Hit"
 
                 half2 uv = input.uv;
                 half4 texColor = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv);
-                half4 baseColor = lerp(_BaseColor, _HitColor, _Hit);
+                half4 baseColor = lerp(_BaseColor, float4(_HitColor.rgb * (_Emission + 1), _HitColor.a), _Hit);
                 half3 color = texColor.rgb * baseColor.rgb;
                 half alpha = texColor.a * baseColor.a;
 

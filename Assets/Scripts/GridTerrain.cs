@@ -29,11 +29,7 @@ public class GridTerrain : MonoBehaviour
         }
         m_instances = spawnQueue.ToArray();
 
-        Mesh newMesh = new Mesh();
-        newMesh.vertices = mesh.vertices;
-        newMesh.triangles = mesh.triangles;
-        newMesh.uv = mesh.uv;
-        mesh = newMesh;
+        mesh = Instantiate(mesh);
     }
 
     void Update()
@@ -42,7 +38,7 @@ public class GridTerrain : MonoBehaviour
         int gridZ = (int)transform.position.z / size * size;
         material.SetInt("_GridX", gridX);
         material.SetInt("_GridZ", gridZ);
-        mesh.bounds = new Bounds(new Vector3(gridX, 0, gridZ) + offset, new Vector3(range, 1, range));
+        mesh.bounds = new Bounds(new Vector3(gridX / scale.x, 0, gridZ / scale.z), new Vector3(1, 1, 1));
         Graphics.DrawMeshInstanced(mesh, 0, material, m_instances, m_instances.Length);
     }
 }

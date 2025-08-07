@@ -91,6 +91,8 @@ Shader "Custom/NoiseSphere"
                 UNITY_DEFINE_INSTANCED_PROP(half, _Surface)
                 UNITY_DEFINE_INSTANCED_PROP(half, _Emission)
             UNITY_INSTANCING_BUFFER_END(UnityPerMaterial)
+            float _Clip;
+            float _ClipSign;
             float _Swing;
             float _MaxSpectrum;
 
@@ -108,6 +110,7 @@ Shader "Custom/NoiseSphere"
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
+                float cameraDist : TEXCOORD1;
                 float4 color : COLOR;
 
                 UNITY_VERTEX_INPUT_INSTANCE_ID
@@ -228,6 +231,8 @@ Shader "Custom/NoiseSphere"
                 input.positionOS.xyz *= deform;
                 input.positionOS.y += posNoise * 10;
                 output.positionCS = mul(UNITY_MATRIX_MVP, input.positionOS);
+                cameraPos = mul(UNITY_MATRIX_MV, input.positionOS);
+                output.cameraDist = dot(cameraPos, cameraPos);
                 float4 colorA = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _ColorA);
                 float4 colorB = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _ColorB);
                 float4 colorC = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _ColorC);
@@ -249,6 +254,7 @@ Shader "Custom/NoiseSphere"
             {
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+                clip(_ClipSign * (_Clip - input.cameraDist));
 
                 half4 baseColor = input.color;
                 half3 color = baseColor.rgb;

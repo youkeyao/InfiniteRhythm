@@ -14,7 +14,7 @@ struct AudioData
 
 public class AudioManager : MonoBehaviour
 {
-    const int NumSpectrumSample = 1024;
+    const int NumSpectrumSample = 512;
 
     public LevelManager levelManager;
     public int bufferSize = 10;
@@ -29,7 +29,6 @@ public class AudioManager : MonoBehaviour
 
     AudioSource m_audioSource;
     Queue<AudioClip> m_audioClips = new Queue<AudioClip>();
-    Queue<Note> m_chart = new Queue<Note>();
     string m_wsurl = "wss://generativelanguage.googleapis.com//ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateMusic?key=AIzaSyBE_WpYLV2beN9E52AUsGTjzjs82_DVT_I";
     WebSocket m_webSocket;
     float m_audioLength;
@@ -120,11 +119,6 @@ public class AudioManager : MonoBehaviour
         await m_webSocket.SendText(message);
     }
 
-    public Queue<Note> GetChart()
-    {
-        return m_chart;
-    }
-
     public float[] GetSpectrumData()
     {
         return m_spectrum;
@@ -178,11 +172,7 @@ public class AudioManager : MonoBehaviour
         audioClip.SetData(samples, 0);
 
         // generate chart
-        List<Note> chart = ChartGenerator.GetChart(samples, sampleRate, m_audioLength, levelManager.NumTracks);
-        foreach (Note note in chart)
-        {
-            m_chart.Enqueue(note);
-        }
+        ChartGenerator.Generate(samples, sampleRate, m_audioLength, levelManager.NumTracks);
         m_audioLength += audioClip.length;
         m_audioClips.Enqueue(audioClip);
     }
@@ -193,11 +183,7 @@ public class AudioManager : MonoBehaviour
         audioClip.GetData(samples, 0);
 
         // generate chart
-        List<Note> chart = ChartGenerator.GetChart(samples, audioClip.frequency, m_audioLength, levelManager.NumTracks);
-        foreach (Note note in chart)
-        {
-            m_chart.Enqueue(note);
-        }
+        ChartGenerator.Generate(samples, audioClip.frequency, m_audioLength, levelManager.NumTracks);
         m_audioLength += audioClip.length;
         m_audioClips.Enqueue(audioClip);
     }
@@ -234,7 +220,6 @@ public class AudioManager : MonoBehaviour
                 else
                 {
                     levelManager.Stop();
-                    m_chart.Clear();
                 }
             }
         }
@@ -244,21 +229,28 @@ public class AudioManager : MonoBehaviour
             m_audioSource.Pause();
         }
 
-        // generate curve
-        float currentTime = Time.time - levelManager.StartTime;
-        while (CurveGenerator.GetLength(0) < currentTime * levelManager.speed + levelManager.showDistance)
-        {
-            CurveGenerator.GenerateNextControlPoint();
-        }
-
-        // update spectrum
         if (levelManager.IsPlaying)
         {
+            // generate curve
+            float currentTime = Time.time - levelManager.StartTime;
+            while (CurveGenerator.GetLength(0) < currentTime * levelManager.speed + levelManager.showDistance)
+            {
+                CurveGenerator.GenerateNextControlPoint();
+            }
+
+            // update spectrum
             m_audioSource.GetSpectrumData(m_spectrum, 0, FFTWindow.BlackmanHarris);
             Shader.SetGlobalFloatArray("_Spectrum", m_spectrum);
             m_maxSpectrum = m_spectrum.Max();
             Shader.SetGlobalFloat("_MaxSpectrum", m_maxSpectrum);
         }
+    }
+
+    public void Clear()
+    {
+        m_audioLength = 0;
+        m_audioClips.Clear();
+        m_audioSource.clip = null;
     }
 
     async void Play()

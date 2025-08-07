@@ -6,7 +6,7 @@ using TMPro;
 public class NoteManager : MonoBehaviour
 {
     public LevelManager levelManager;
-    public AudioManager audioManager;
+    public Transform controllerTransform;
     public Transform cameraTransform;
     public GameObject hitPrefab;
 
@@ -26,14 +26,11 @@ public class NoteManager : MonoBehaviour
 
     // hit
     public float hitThreshold = 1.5f;
-    public float hitShakeDuration = 0.1f;
-    public float hitShakeAmplitude = 0.05f;
-    public float hitShakeFreq = 10f;
+    public float hitEffectDuration = 0.1f;
 
     List<float> m_noteSpawnTime = new List<float>();
     List<Matrix4x4> m_noteSpawnList = new List<Matrix4x4>();
     float m_trackThreshold = 0.1f;
-    bool m_isInit = false;
     List<GameObject> m_hitHints = new List<GameObject>();
 
     float m_roadDistance = 0;
@@ -52,9 +49,9 @@ public class NoteManager : MonoBehaviour
         for (int i = 0; i < levelManager.NumTracks; i++)
         {
             Vector3 offset = new Vector3(i * spacing, 0, 0);
-            GameObject hitObject = Instantiate(hitPrefab, cameraTransform);
-            hitObject.transform.position = transform.position + offset;
-            hitObject.transform.rotation = transform.rotation;
+            GameObject hitObject = Instantiate(hitPrefab, controllerTransform);
+            hitObject.transform.localPosition = offset;
+            hitObject.transform.localRotation = Quaternion.identity;
             hitObject.GetComponentInChildren<TextMeshPro>().text = levelManager.keyCodes[i].ToString();
             m_hitHints.Add(hitObject);
         }
@@ -176,7 +173,7 @@ public class NoteManager : MonoBehaviour
         }
 
         // Spawn
-        Queue<Note> chart = audioManager.GetChart();
+        Queue<Note> chart = ChartGenerator.GetChart();
         while (chart.Count > 0 && chart.Peek().time * levelManager.speed < CurveGenerator.GetLength(0))
         {
             Note note = chart.Dequeue();
@@ -210,7 +207,10 @@ public class NoteManager : MonoBehaviour
                     if (Input.GetKeyDown(levelManager.keyCodes[j]) && Mathf.Abs(Vector3.Dot(trackPosition - position, trackDirection)) < m_trackThreshold)
                     {
                         StartCoroutine(ShakeRoutine(j));
-                        GameObject effect = Instantiate(noteEffect, position, m_noteSpawnList[i].rotation * Quaternion.LookRotation(new Vector3(0, 0, 1)));
+
+                        GameObject effect = Instantiate(noteEffect, controllerTransform);
+                        effect.transform.position = position;
+                        effect.transform.rotation = m_noteSpawnList[i].rotation * Quaternion.LookRotation(new Vector3(0, 0, 1));
                         ParticleSystem ps = noteEffect.GetComponentInChildren<ParticleSystem>();
                         Destroy(effect, ps.main.duration + ps.main.startLifetime.constantMax);
 
@@ -226,20 +226,20 @@ public class NoteManager : MonoBehaviour
     IEnumerator ShakeRoutine(int trackID)
     {
         float elapsed = 0f;
-        Vector3 initialPosition = m_hitHints[trackID].transform.localPosition;
         Renderer renderer = m_hitHints[trackID].GetComponentInChildren<Renderer>();
-        while (elapsed < hitShakeDuration)
+        while (elapsed < hitEffectDuration)
         {
             elapsed += Time.deltaTime;
 
-            float x = Mathf.Sin(elapsed * hitShakeFreq * Mathf.PI * 2) * hitShakeAmplitude;
-            float y = Mathf.Sin(elapsed * hitShakeFreq * Mathf.PI * 2 + 1) * hitShakeAmplitude;
-            float z = 0;
+            float hitStrength = Mathf.Sin(elapsed / hitEffectDuration * Mathf.PI);
 
-            m_hitHints[trackID].transform.localPosition = initialPosition + new Vector3(x, y, z);
+            float x = hitStrength + 1;
+            float y = 1;
+            float z = hitStrength + 1;
+
+            m_hitHints[trackID].transform.localScale = new Vector3(x, y, z);
 
             // hit color
-            float hitStrength = 4 * elapsed / hitShakeDuration - 4 * elapsed * elapsed / hitShakeDuration / hitShakeDuration;
             renderer.GetPropertyBlock(m_propertyBlock);
             m_propertyBlock.SetFloat("_Hit", hitStrength);
             renderer.SetPropertyBlock(m_propertyBlock);
@@ -247,7 +247,11 @@ public class NoteManager : MonoBehaviour
 
             yield return null;
         }
+        renderer.GetPropertyBlock(m_propertyBlock);
+        m_propertyBlock.SetFloat("_Hit", 0);
+        renderer.SetPropertyBlock(m_propertyBlock);
+        m_linePropertyBlock[trackID].SetFloat("_Hit", 0);
         
-        m_hitHints[trackID].transform.localPosition = initialPosition;
+        m_hitHints[trackID].transform.localScale = new Vector3(1, 1, 1);
     }
 }

@@ -126,18 +126,18 @@ public static class CurveGenerator
 
     public static void Clear()
     {
-        s_controlPointsHead = 0;
-        s_controlPointsSize = 2;
-        for (int i = 0; i < ChildCol * 2 + 1; i++)
-        {
-            s_lengths[i] = 0;
-        }
+        InitializeControlPoints();
     }
 
     static ControlPoint[] InitializeControlPoints()
     {
-        s_controlPoints = new ControlPoint[ControlPointCapacity];
+        for (int i = 0; i < ChildCol * 2 + 1; i++)
+        {
+            s_lengths[i] = 0;
+        }
+        s_controlPointsHead = 0;
 
+        s_controlPoints = new ControlPoint[ControlPointCapacity];
         s_controlPoints[0] = new ControlPoint { position = Vector3.zero, direction = Vector3.forward };
 
         float L = baseSegmentLength / 3;
@@ -162,12 +162,6 @@ public static class CurveGenerator
         ControlPoint prevControlPoint = s_controlPoints[prevIndex];
 
         float L = baseSegmentLength / 3;
-        // float avgE = 0;
-        // foreach (float sample in samples)
-        // {
-        //     avgE += sample;
-        // }
-        // avgE /= samples.Length;
         Vector3 P0 = prevControlPoint.position;
         Vector3 P1 = P0 + prevControlPoint.direction * L;
         Vector3 P2 = prevprevControlPoint.position + prevprevControlPoint.direction * L + 4 * prevControlPoint.direction * L;

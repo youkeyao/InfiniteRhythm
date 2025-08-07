@@ -10,8 +10,8 @@ public class AudioAnalysis : MonoBehaviour
     public LevelManager levelManager;
     public AudioManager audioManager;
 
-    public float swingTransitionThreshold = 0.2f;
-    public float swingThreshold = 0.2f;
+    public float swingThreshold = 1e-3f;
+    public float swingTransitionThreshold = 0.01f;
     public float swingScale = 1.0f;
     public Vector2 swingPI = new Vector2(1f, 1f);
 
@@ -34,7 +34,7 @@ public class AudioAnalysis : MonoBehaviour
         {
             // swing
             float maxSpectrum = audioManager.GetMaxSpectrum();
-            if (maxSpectrum > swingThreshold && (Mathf.Abs(m_swingValue) > (1 - swingTransitionThreshold) || Mathf.Abs(m_swingValue) < swingTransitionThreshold))
+            if (maxSpectrum > swingThreshold && Mathf.Abs(m_swingValue) < swingTransitionThreshold)
             {
                 m_swingTarget = -Mathf.Sign(m_swingTarget) * swingScale * maxSpectrum;
             }
@@ -49,7 +49,7 @@ public class AudioAnalysis : MonoBehaviour
 
             // beat
             float[] spectrumData = audioManager.GetSpectrumData();
-            if (spectrumData[6] > beatThreshold)
+            if (spectrumData[4] > beatThreshold)
             {
                 m_beatTarget = beatScale;
             }

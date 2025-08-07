@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d71537c3367f538468b22d7683bc044f, type: 3}
+  m_Name: Space
+  m_EditorClassIdentifier: 
+  landDatas:
+  - offset: {x: 0, y: 5, z: 0}
+    rotation: {x: 0, y: 0, z: 0}
+    scale: {x: 0.9, y: 1, z: 0.9}
+    mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+    material: {fileID: 2100000, guid: fe71eed2952d9c94da920c4788c6c305, type: 2}
+    heightMap: {fileID: 2800000, guid: 508512af836115e4d964082f8e9df00d, type: 3}
+    spacing: 1
+    validateLandCol: feffffff02000000
+  - offset: {x: 0, y: 30, z: 0}
+    rotation: {x: 0, y: 0, z: 0}
+    scale: {x: 3, y: 3, z: 3}
+    mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+    material: {fileID: 2100000, guid: d0e461061f7157243bff26d1248f183e, type: 2}
+    heightMap: {fileID: 2800000, guid: 508512af836115e4d964082f8e9df00d, type: 3}
+    spacing: 25
+    validateLandCol: ffffffff01000000
+  - offset: {x: 0, y: 0, z: 0}
+    rotation: {x: 0, y: 0, z: 0}
+    scale: {x: 1, y: 1, z: 1}
+    mesh: {fileID: 0}
+    material: {fileID: 0}
+    heightMap: {fileID: 2800000, guid: 508512af836115e4d964082f8e9df00d, type: 3}
+    spacing: 15
+    validateLandCol: ffffffff01000000
+  baseVegNoiseScale: 0.2
+  detailVegNoiseScale: 0.8
+  baseVegNoiseThreshold: 0.4
+  detailVegNoiseThreshold: 0.6
+  itemDatas: []
