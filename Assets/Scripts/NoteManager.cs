@@ -27,6 +27,12 @@ public class NoteManager : MonoBehaviour
     // hit
     public float hitThreshold = 1.5f;
     public float hitEffectDuration = 0.1f;
+    public float shakeMagnitude = 0.5f;
+
+    // statistics
+    public int Combo => m_combo;
+    public int Miss => m_miss;
+    public int Hit => m_hit;
 
     List<float> m_noteSpawnTime = new List<float>();
     List<Matrix4x4> m_noteSpawnList = new List<Matrix4x4>();
@@ -40,6 +46,11 @@ public class NoteManager : MonoBehaviour
     Queue<Vector3> m_roadVertices = new Queue<Vector3>();
     List<Queue<Vector3>> m_lineVertices = new List<Queue<Vector3>>();
     List<MaterialPropertyBlock> m_linePropertyBlock = new List<MaterialPropertyBlock>();
+
+    int m_comboCycle = 50;
+    int m_combo = 0;
+    int m_hit = 0;
+    int m_miss = 0;
 
     MaterialPropertyBlock m_propertyBlock;
 
@@ -79,6 +90,10 @@ public class NoteManager : MonoBehaviour
         m_lineMesh.Clear();
         m_lineVertices.Clear();
         m_linePropertyBlock.Clear();
+
+        m_combo = 0;
+        m_hit = 0;
+        m_miss = 0;
     }
 
     public void Update()
@@ -170,6 +185,8 @@ public class NoteManager : MonoBehaviour
         {
             m_noteSpawnTime.RemoveAt(0);
             m_noteSpawnList.RemoveAt(0);
+            m_combo = 0;
+            m_miss = 0;
         }
 
         // Spawn
@@ -206,7 +223,10 @@ public class NoteManager : MonoBehaviour
                     Vector3 trackPosition = targetPosition + targetTransform.MultiplyVector(Vector3.right * (transform.position.x + j * spacing));
                     if (Input.GetKeyDown(levelManager.keyCodes[j]) && Mathf.Abs(Vector3.Dot(trackPosition - position, trackDirection)) < m_trackThreshold)
                     {
-                        StartCoroutine(ShakeRoutine(j));
+                        m_hit++;
+                        m_combo++;
+
+                        StartCoroutine(HitRoutine(j));
 
                         GameObject effect = Instantiate(noteEffect, controllerTransform);
                         effect.transform.position = position;
@@ -223,9 +243,11 @@ public class NoteManager : MonoBehaviour
         }
     }
 
-    IEnumerator ShakeRoutine(int trackID)
+    IEnumerator HitRoutine(int trackID)
     {
         float elapsed = 0f;
+        bool isCombo = m_combo % m_comboCycle == 0;
+        Vector3 initPosition = cameraTransform.localPosition;
         Renderer renderer = m_hitHints[trackID].GetComponentInChildren<Renderer>();
         while (elapsed < hitEffectDuration)
         {
@@ -233,11 +255,11 @@ public class NoteManager : MonoBehaviour
 
             float hitStrength = Mathf.Sin(elapsed / hitEffectDuration * Mathf.PI);
 
-            float x = hitStrength + 1;
-            float y = 1;
-            float z = hitStrength + 1;
-
-            m_hitHints[trackID].transform.localScale = new Vector3(x, y, z);
+            m_hitHints[trackID].transform.localScale = new Vector3(hitStrength + 1, 1, hitStrength + 1);
+            if (isCombo)
+            {
+                cameraTransform.localPosition = initPosition + new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f), 0) * shakeMagnitude;
+            }
 
             // hit color
             renderer.GetPropertyBlock(m_propertyBlock);
@@ -251,7 +273,8 @@ public class NoteManager : MonoBehaviour
         m_propertyBlock.SetFloat("_Hit", 0);
         renderer.SetPropertyBlock(m_propertyBlock);
         m_linePropertyBlock[trackID].SetFloat("_Hit", 0);
-        
+
         m_hitHints[trackID].transform.localScale = new Vector3(1, 1, 1);
+        cameraTransform.localPosition = initPosition;
     }
 }

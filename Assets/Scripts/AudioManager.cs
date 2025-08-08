@@ -37,7 +37,7 @@ public class AudioManager : MonoBehaviour
     bool m_isGenerating = false;
     float m_maxSpectrum = 0;
     float[] m_spectrum = new float[NumSpectrumSample];
-    int m_clipCount = 0;
+    int m_clipCycle = 0;
 
     void Start()
     {
@@ -218,10 +218,10 @@ public class AudioManager : MonoBehaviour
                 {
                     m_audioSource.clip = m_audioClips.Dequeue();
                     m_audioSource.Play();
-                    m_clipCount++;
-                    if (m_clipCount >= changeSceneFreq)
+                    m_clipCycle++;
+                    if (m_clipCycle >= changeSceneFreq)
                     {
-                        m_clipCount = 0;
+                        m_clipCycle = 0;
                         levelManager.ChangeScene();
                     }
                 }
@@ -250,7 +250,7 @@ public class AudioManager : MonoBehaviour
     public void Clear()
     {
         m_audioLength = 0;
-        m_clipCount = 0;
+        m_clipCycle = 0;
         m_audioClips.Clear();
         m_audioSource.clip = null;
     }

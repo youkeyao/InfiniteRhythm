@@ -1,9 +1,12 @@
 using System.Collections.Generic;
-using System.IO;
+using System.Collections;
 using UnityEngine;
+using System.IO;
 using TMPro;
 using UnityEngine.Networking;
 using Unity.VisualScripting;
+using UnityEngine.UI;
+using SFB;
 
 public class LevelManager : MonoBehaviour
 {
@@ -12,13 +15,18 @@ public class LevelManager : MonoBehaviour
 
     public AudioManager audioManager;
     public NoteManager noteManager;
+
     public GameObject startUI;
     public GameObject loadingUI;
     public GameObject pauseUI;
+    public GameObject chooseSongUI;
+    public Transform songContent;
+    public GameObject songPrefab;
+
+    public Mesh scanMesh;
+    public Material scanMat;
 
     public SceneData[] scenes;
-    public TMP_Dropdown levelDropDown;
-
     public KeyCode[] keyCodes = new KeyCode[]
     {
         KeyCode.A,
@@ -37,12 +45,24 @@ public class LevelManager : MonoBehaviour
     int m_sceneIndex = 0;
     MapManager m_mapManager;
 
-    bool isTmp = false;
-
     void Start()
     {
-        PopulateDropdown();
+        foreach (string filePath in Directory.GetFiles(Application.streamingAssetsPath))
+        {
+            string name = Path.GetFileName(filePath);
+            if (name.EndsWith(".wav") || name.EndsWith(".mp3"))
+            {
+                if (!File.Exists(Path.Combine(Application.persistentDataPath, name)))
+                {
+                    File.Copy(filePath, Path.Combine(Application.persistentDataPath, name));
+                }
+            }
+        }
+
+        PopulateSongChoose();
+        startUI.SetActive(true);
         loadingUI.SetActive(false);
+        chooseSongUI.SetActive(false);
     }
 
     void Update()
@@ -78,6 +98,7 @@ public class LevelManager : MonoBehaviour
         startUI.SetActive(false);
         pauseUI.SetActive(false);
         loadingUI.SetActive(true);
+        chooseSongUI.SetActive(false);
         noteManager.Init();
         ChangeScene();
     }
@@ -90,9 +111,14 @@ public class LevelManager : MonoBehaviour
         loadingUI.SetActive(false);
     }
 
-    public void Play()
+    public void ChooseSong()
     {
-        StartCoroutine(LoadAudio());
+        chooseSongUI.SetActive(!chooseSongUI.activeSelf);
+    }
+
+    void Play(string name)
+    {
+        StartCoroutine(LoadAudio(name));
         Init();
     }
 
@@ -101,6 +127,11 @@ public class LevelManager : MonoBehaviour
         audioManager.Connect();
         m_isConnecting = true;
         Init();
+    }
+
+    public void Quit()
+    {
+        Application.Quit();
     }
 
     public void Stop()
@@ -114,6 +145,11 @@ public class LevelManager : MonoBehaviour
         m_mapManager = null;
         noteManager.Clear();
         audioManager.Clear();
+    }
+
+    public void UploadMusic()
+    {
+        StartCoroutine(SelectAndSaveAudio());
     }
 
     public void ChangeScene()
@@ -134,32 +170,39 @@ public class LevelManager : MonoBehaviour
         m_mapManager.SetSceneData(scenes[m_sceneIndex]);
         m_mapManager.levelManager = this;
         m_mapManager.cameraTransform = noteManager.cameraTransform;
+        StartCoroutine(ScanScene());
     }
 
-    void PopulateDropdown()
+    void PopulateSongChoose()
     {
-        levelDropDown.ClearOptions();
-
-        string streamingAssetsPath = Application.streamingAssetsPath;
-        string[] subDirectories = Directory.GetDirectories(streamingAssetsPath);
-
-        List<string> directoryNames = new List<string>();
-        foreach (string dirPath in subDirectories)
+        for (int i = songContent.childCount - 1; i >= 0; i--)
         {
-            string dirName = Path.GetFileName(dirPath);
-            directoryNames.Add(dirName);
+            Destroy(songContent.GetChild(i).gameObject);
         }
 
-        levelDropDown.AddOptions(directoryNames);
-
-        levelDropDown.value = 0;
-        levelDropDown.RefreshShownValue();
+        int count = 0;
+        foreach (string filePath in Directory.GetFiles(Application.persistentDataPath))
+        {
+            string name = Path.GetFileName(filePath);
+            if (name.EndsWith(".wav") || name.EndsWith(".mp3"))
+            {
+                GameObject song = Instantiate(songPrefab, songContent);
+                song.transform.GetChild(0).GetComponentInChildren<TextMeshProUGUI>().text = name;
+                song.transform.GetChild(0).GetComponent<Button>().onClick.AddListener(() => Play(name));
+                song.transform.GetChild(1).GetComponent<Button>().onClick.AddListener(() =>
+                {
+                    File.Delete(filePath);
+                    PopulateSongChoose();
+                });
+                count++;
+            }
+        }
+        songContent.GetComponent<RectTransform>().sizeDelta = new Vector2(0, count * 80 + 40);
     }
 
-    IEnumerator<UnityWebRequestAsyncOperation> LoadAudio()
+    IEnumerator<UnityWebRequestAsyncOperation> LoadAudio(string name)
     {
-        string dirPath = Path.Combine(Application.streamingAssetsPath, levelDropDown.options[levelDropDown.value].text);
-        string audioFile = Directory.GetFiles(dirPath)[0];
+        string audioFile = Path.Combine(Application.persistentDataPath, name);
 
         using (UnityWebRequest www = UnityWebRequestMultimedia.GetAudioClip(audioFile, AudioType.UNKNOWN))
         {
@@ -183,5 +226,43 @@ public class LevelManager : MonoBehaviour
         }
 
         Ready();
+    }
+
+    IEnumerator ScanScene()
+    {
+        float elapsed = 0f;
+        while (elapsed < 1)
+        {
+            elapsed += Time.deltaTime;
+            float size = elapsed * showDistance;
+            Graphics.DrawMesh(scanMesh, noteManager.cameraTransform.localToWorldMatrix * Matrix4x4.Scale(new Vector3(size, size, size)), scanMat, 0);
+
+            yield return null;
+        }
+    }
+
+    IEnumerator SelectAndSaveAudio()
+    {
+        ExtensionFilter[] extensions = new[] {
+            new ExtensionFilter("Sound Files", "mp3", "wav" )
+        };
+        string[] filePaths = StandaloneFileBrowser.OpenFilePanel(
+            "Choose Music",
+            "",
+            extensions,
+            false
+        );
+
+        if (filePaths.Length == 0 || string.IsNullOrEmpty(filePaths[0]))
+        {
+            yield break;
+        }
+
+        string sourcePath = filePaths[0];
+        string targetPath = Path.Combine(Application.persistentDataPath, Path.GetFileName(sourcePath));
+
+        File.Copy(sourcePath, targetPath);
+        
+        PopulateSongChoose();
     }
 }
