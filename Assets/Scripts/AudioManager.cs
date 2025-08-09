@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using System.Linq;
 using System;
+using TMPro;
+using UnityEngine.UI;
 
 struct AudioData
 {
@@ -17,10 +19,11 @@ public class AudioManager : MonoBehaviour
     const int NumSpectrumSample = 512;
 
     public LevelManager levelManager;
+    public TMP_InputField bpmInput;
+    public Slider bpmSlider;
     public int bufferSize = 5;
     public int sampleRate = 48000;
     public int numChannels = 2;
-    public int changeSceneFreq = 2;
 
     public bool IsReady => m_isSetup && m_audioClips.Count > bufferSize;
 
@@ -37,10 +40,11 @@ public class AudioManager : MonoBehaviour
     bool m_isGenerating = false;
     float m_maxSpectrum = 0;
     float[] m_spectrum = new float[NumSpectrumSample];
-    int m_clipCycle = 0;
 
     void Start()
     {
+        bpmSlider.value = m_bpm;
+        SetBPM(false);
         m_audioSource = this.gameObject.AddComponent<AudioSource>();
 
         Dictionary<string, string> headers = new Dictionary<string, string>
@@ -96,29 +100,18 @@ public class AudioManager : MonoBehaviour
         {
             await m_webSocket.SendText("{\"setup\": {\"model\": \"models/lyria-realtime-exp\"}}");
             // SetWeightedPrompts("synthwave", 1.0f);
-            SetWeightedPrompts("chillwave", 1.0f);
-            SetWeightedPrompts("Bossa Nova", 1.0f);
-            // SetWeightedPrompts("Drum and Bass", 0.8f);
+            // SetWeightedPrompts("chillwave", 1.0f);
+            // SetWeightedPrompts("Bossa Nova", 1.0f);
+            // SetWeightedPrompts("Drum and Bass", 1.0f);
             // SetWeightedPrompts("Post Punk", 1.0f);
             // SetWeightedPrompts("Shoegaze", 0.5f);
             // SetWeightedPrompts("Funk", 1.0f);
             // SetWeightedPrompts("Chiptune", 1.0f);
             // SetWeightedPrompts("Lush Strings", 1.0f);
-            SetMusicGenerationConfig(m_temperature, m_bpm);
+            SendWeightedPrompts();
+            SendMusicGenerationConfig();
             m_isSetup = true;
         }
-    }
-
-    private async void SendWeightedPrompts()
-    {
-        string message = $"{{\"clientContent\": {{\"weightedPrompts\": [";
-        foreach (string prompt in m_weightedPrompts.Keys)
-        {
-            message += $"{{\"text\": \"{prompt}\", \"weight\": {m_weightedPrompts[prompt]}}},";
-        }
-        message = message.Substring(0, message.Length - 1);
-        message += "]}}";
-        await m_webSocket.SendText(message);
     }
 
     public float[] GetSpectrumData()
@@ -134,19 +127,25 @@ public class AudioManager : MonoBehaviour
     public void SetWeightedPrompts(string prompt, float weight)
     {
         m_weightedPrompts[prompt] = weight;
-        SendWeightedPrompts();
     }
 
-    public void RemoveWeightedPrompts(string prompt)
+    public void SetBPM(bool isInput)
     {
-        m_weightedPrompts.Remove(prompt);
-        SendWeightedPrompts();
+        if (isInput)
+        {
+            m_bpm = int.Parse(bpmInput.text);
+            bpmSlider.value = m_bpm;
+        }
+        else
+        {
+            m_bpm = (int)bpmSlider.value;
+            bpmInput.text = m_bpm.ToString();
+        }
     }
 
-    public async void SetMusicGenerationConfig(float temperature, int bpm)
+    public void ClearWeightedPrompts()
     {
-        string message = $"{{\"musicGenerationConfig\": {{\"temperature\": {temperature}, \"bpm\": {bpm}}}}}";
-        await m_webSocket.SendText(message);
+        m_weightedPrompts.Clear();
     }
 
     async void OnDestroy()
@@ -218,12 +217,6 @@ public class AudioManager : MonoBehaviour
                 {
                     m_audioSource.clip = m_audioClips.Dequeue();
                     m_audioSource.Play();
-                    m_clipCycle++;
-                    if (m_clipCycle >= changeSceneFreq)
-                    {
-                        m_clipCycle = 0;
-                        levelManager.ChangeScene();
-                    }
                 }
                 else
                 {
@@ -250,7 +243,6 @@ public class AudioManager : MonoBehaviour
     public void Clear()
     {
         m_audioLength = 0;
-        m_clipCycle = 0;
         m_audioClips.Clear();
         m_audioSource.clip = null;
     }
@@ -280,5 +272,23 @@ public class AudioManager : MonoBehaviour
             m_isGenerating = false;
             await m_webSocket.SendText("{\"playbackControl\": \"PAUSE\"}");
         }
+    }
+
+    async void SendWeightedPrompts()
+    {
+        string message = $"{{\"clientContent\": {{\"weightedPrompts\": [";
+        foreach (string prompt in m_weightedPrompts.Keys)
+        {
+            message += $"{{\"text\": \"{prompt}\", \"weight\": {m_weightedPrompts[prompt]}}},";
+        }
+        message = message.Substring(0, message.Length - 1);
+        message += "]}}";
+        await m_webSocket.SendText(message);
+    }
+
+    async void SendMusicGenerationConfig()
+    {
+        string message = $"{{\"musicGenerationConfig\": {{\"temperature\": {m_temperature}, \"bpm\": {m_bpm}}}}}";
+        await m_webSocket.SendText(message);
     }
 }

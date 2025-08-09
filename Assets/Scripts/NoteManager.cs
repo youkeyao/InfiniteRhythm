@@ -218,7 +218,7 @@ public class NoteManager : MonoBehaviour
                 break;
             if (targetDistance > -hitThreshold)
             {
-                for (int j = 0; j < levelManager.keyCodes.Length; j++)
+                for (int j = 0; j < levelManager.NumTracks; j++)
                 {
                     Vector3 trackPosition = targetPosition + targetTransform.MultiplyVector(Vector3.right * (transform.position.x + j * spacing));
                     if (Input.GetKeyDown(levelManager.keyCodes[j]) && Mathf.Abs(Vector3.Dot(trackPosition - position, trackDirection)) < m_trackThreshold)
@@ -230,7 +230,7 @@ public class NoteManager : MonoBehaviour
 
                         GameObject effect = Instantiate(noteEffect, controllerTransform);
                         effect.transform.position = position;
-                        effect.transform.rotation = m_noteSpawnList[i].rotation * Quaternion.LookRotation(new Vector3(0, 0, 1));
+                        effect.transform.rotation = m_noteSpawnList[i].rotation;
                         ParticleSystem ps = noteEffect.GetComponentInChildren<ParticleSystem>();
                         Destroy(effect, ps.main.duration + ps.main.startLifetime.constantMax);
 

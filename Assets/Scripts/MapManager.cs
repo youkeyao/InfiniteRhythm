@@ -123,6 +123,11 @@ public class MapManager : MonoBehaviour
                         Vector3 meshBoundSize = m_sceneData.landDatas[landMeshIndex].mesh.bounds.size;
                         landSize = new Vector3(meshBoundSize.x * m_sceneData.landDatas[landMeshIndex].scale.x, meshBoundSize.y * m_sceneData.landDatas[landMeshIndex].scale.y, meshBoundSize.z * m_sceneData.landDatas[landMeshIndex].scale.z);
                         m_landSpawnQueues[landMeshIndex].Enqueue(landTransform);
+                        // GameObject test = new GameObject();
+                        // test.transform.position = landTransform.GetPosition();
+                        // test.transform.rotation = landTransform.rotation;
+                        // test.AddComponent<MeshFilter>().mesh = m_sceneData.landDatas[landMeshIndex].mesh;
+                        // test.AddComponent<MeshRenderer>().material = m_sceneData.landDatas[landMeshIndex].material;
                     }
                     // generate items
                     GenerateItems(landTransform, landSize, m_sceneData.landDatas[landMeshIndex].heightMap, landMeshIndex);
@@ -172,6 +177,11 @@ public class MapManager : MonoBehaviour
                     if (detailNoise > m_sceneData.detailVegNoiseThreshold)
                         continue;
                     m_itemSpawnQueues[i].Enqueue(itemTransform);
+                    // GameObject test = new GameObject();
+                    // test.transform.position = itemTransform.GetPosition();
+                    // test.transform.rotation = itemTransform.rotation;
+                    // test.AddComponent<MeshFilter>().mesh = m_sceneData.itemDatas[i].mesh;
+                    // test.AddComponent<MeshRenderer>().material = m_sceneData.itemDatas[i].material;
                 }
             }
         }

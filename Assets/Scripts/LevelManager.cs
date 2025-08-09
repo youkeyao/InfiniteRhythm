@@ -16,34 +16,50 @@ public class LevelManager : MonoBehaviour
     public AudioManager audioManager;
     public NoteManager noteManager;
 
+    // GUI
     public GameObject startUI;
     public GameObject loadingUI;
     public GameObject pauseUI;
     public GameObject chooseSongUI;
+    public GameObject chooseInfiniteUI;
+    public GameObject settingsUI;
     public Transform songContent;
+    public Transform parameterContent;
+    public Transform trackKeyContent;
     public GameObject songPrefab;
+    public GameObject parameterPrefab;
+    public GameObject trackKeyPrefab;
+    // Settings
+    public TMP_InputField speedInput;
+    public Slider speedSlider;
+    public TMP_InputField noteIntervalInput;
+    public Slider noteIntervalSlider;
+    public TMP_InputField noteThresholdInput;
+    public Slider noteThresholdSlider;
+    public TMP_InputField noteSensitivityInput;
+    public Slider noteSensitivitySlider;
+    public TMP_InputField trackNumInput;
+    public Slider trackNumSlider;
 
     public Mesh scanMesh;
     public Material scanMat;
 
     public SceneData[] scenes;
-    public KeyCode[] keyCodes = new KeyCode[]
-    {
-        KeyCode.A,
-        KeyCode.D,
-        KeyCode.J,
-        KeyCode.L,
-    };
-    public int NumTracks => keyCodes.Length;
+    public List<KeyCode> keyCodes = new List<KeyCode>();
+    public int NumTracks => keyCodes.Count;
 
     public bool IsPlaying => m_isPlaying;
     public float StartTime => m_startTime;
 
     bool m_isPlaying = false;
-    bool m_isConnecting = false;
+    int m_recordKey = -1;
     float m_startTime = -1;
     int m_sceneIndex = 0;
     MapManager m_mapManager;
+
+    string[][] m_parameterPrompts = {
+        new string[] { "Drum and Bass", "Shoegaze" },
+    };
 
     void Start()
     {
@@ -59,36 +75,52 @@ public class LevelManager : MonoBehaviour
             }
         }
 
+        AddTrack(KeyCode.A);
+        AddTrack(KeyCode.D);
+        AddTrack(KeyCode.J);
+        AddTrack(KeyCode.L);
+
         PopulateSongChoose();
+        ChangeStyle();
+        speedSlider.value = speed;
+        SetSpeed(false);
+        noteIntervalSlider.value = ChartGenerator.interval;
+        SetNoteInterval(false);
+        noteThresholdSlider.value = ChartGenerator.energyThreshold;
+        SetNoteThreshold(false);
+        noteSensitivitySlider.value = ChartGenerator.sensitivity;
+        SetNoteSensitivity(false);
+
         startUI.SetActive(true);
+        pauseUI.SetActive(false);
         loadingUI.SetActive(false);
         chooseSongUI.SetActive(false);
+        chooseInfiniteUI.SetActive(false);
+        settingsUI.SetActive(false);
     }
 
     void Update()
     {
-        if (m_isConnecting)
-        {
-            if (audioManager.IsReady)
-            {
-                m_isConnecting = false;
-                Ready();
-            }
-        }
-
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            if (Time.timeScale == 0)
+            Pause();
+        }
+        if (m_recordKey >= 0)
+        {
+            if (Input.anyKeyDown)
             {
-                Time.timeScale = 1;
-                m_isPlaying = true;
-                pauseUI.SetActive(false);
-            }
-            else
-            {
-                Time.timeScale = 0;
-                m_isPlaying = false;
-                pauseUI.SetActive(true);
+                foreach (KeyCode key in System.Enum.GetValues(typeof(KeyCode)))
+                {
+                    if (Input.GetKeyDown(key))
+                    {
+                        if (!keyCodes.Contains(key))
+                        {
+                            keyCodes[m_recordKey] = key;
+                            trackKeyContent.GetChild(m_recordKey).GetComponentInChildren<TMP_Text>().text = key.ToString();
+                        }
+                    }
+                }
+                m_recordKey = -1;
             }
         }
     }
@@ -99,6 +131,8 @@ public class LevelManager : MonoBehaviour
         pauseUI.SetActive(false);
         loadingUI.SetActive(true);
         chooseSongUI.SetActive(false);
+        chooseInfiniteUI.SetActive(false);
+        settingsUI.SetActive(false);
         noteManager.Init();
         ChangeScene();
     }
@@ -111,9 +145,20 @@ public class LevelManager : MonoBehaviour
         loadingUI.SetActive(false);
     }
 
-    public void ChooseSong()
+    public void Pause()
     {
-        chooseSongUI.SetActive(!chooseSongUI.activeSelf);
+        if (!m_isPlaying)
+        {
+            Time.timeScale = 1;
+            m_isPlaying = true;
+            pauseUI.SetActive(false);
+        }
+        else
+        {
+            Time.timeScale = 0;
+            m_isPlaying = false;
+            pauseUI.SetActive(true);
+        }
     }
 
     void Play(string name)
@@ -124,14 +169,18 @@ public class LevelManager : MonoBehaviour
 
     public void PlayInfinite()
     {
+        audioManager.ClearWeightedPrompts();
+        foreach (Transform child in parameterContent)
+        {
+            string prompt = child.GetChild(0).GetComponentInChildren<TMP_InputField>().text;
+            if (!string.IsNullOrEmpty(prompt))
+            {
+                audioManager.SetWeightedPrompts(prompt, 1.0f);
+            }
+        }
         audioManager.Connect();
-        m_isConnecting = true;
+        StartCoroutine(WaitForAudioManager());
         Init();
-    }
-
-    public void Quit()
-    {
-        Application.Quit();
     }
 
     public void Stop()
@@ -147,10 +196,131 @@ public class LevelManager : MonoBehaviour
         audioManager.Clear();
     }
 
+    // ---------------------UI-----------------------------------
+
+    public void NewParameter(string prompt = "")
+    {
+        GameObject newParam = Instantiate(parameterPrefab, parameterContent);
+        newParam.transform.GetChild(0).GetComponentInChildren<TMP_InputField>().text = prompt;
+        newParam.transform.GetChild(1).GetComponent<Button>().onClick.AddListener(() =>
+        {
+            Destroy(newParam);
+        });
+    }
+
     public void UploadMusic()
     {
         StartCoroutine(SelectAndSaveAudio());
     }
+
+    public void OnChooseSong()
+    {
+        chooseInfiniteUI.SetActive(false);
+        chooseSongUI.SetActive(!chooseSongUI.activeSelf);
+    }
+
+    public void OnChooseInfinite()
+    {
+        chooseSongUI.SetActive(false);
+        chooseInfiniteUI.SetActive(!chooseInfiniteUI.activeSelf);
+    }
+
+    public void OnSettings()
+    {
+        settingsUI.SetActive(!settingsUI.activeSelf);
+    }
+
+    public void OnQuit()
+    {
+        Application.Quit();
+    }
+
+    // -------------------Settings--------------------------------
+
+    public void SetSpeed(bool isInput)
+    {
+        if (isInput)
+        {
+            speed = float.Parse(speedInput.text);
+            speedSlider.value = speed;
+        }
+        else
+        {
+            speed = speedSlider.value;
+            speedInput.text = speed.ToString("F1");
+        }
+    }
+
+    public void SetNoteInterval(bool isInput)
+    {
+        if (isInput)
+        {
+            ChartGenerator.interval = float.Parse(noteIntervalInput.text);
+            noteIntervalSlider.value = ChartGenerator.interval;
+        }
+        else
+        {
+            noteIntervalInput.text = ChartGenerator.interval.ToString("F1");
+            noteIntervalSlider.value = ChartGenerator.interval;
+        }
+    }
+
+    public void SetNoteThreshold(bool isInput)
+    {
+        if (isInput)
+        {
+            ChartGenerator.energyThreshold = float.Parse(noteThresholdInput.text);
+            noteThresholdSlider.value = ChartGenerator.energyThreshold;
+        }
+        else
+        {
+            noteThresholdInput.text = ChartGenerator.energyThreshold.ToString("F3");
+            noteThresholdSlider.value = ChartGenerator.energyThreshold;
+        }
+    }
+
+    public void SetNoteSensitivity(bool isInput)
+    {
+        if (isInput)
+        {
+            ChartGenerator.sensitivity = float.Parse(noteSensitivityInput.text);
+            noteSensitivitySlider.value = ChartGenerator.sensitivity;
+        }
+        else
+        {
+            noteSensitivityInput.text = ChartGenerator.sensitivity.ToString("F1");
+            noteSensitivitySlider.value = ChartGenerator.sensitivity;
+        }
+    }
+
+    public void AddTrack()
+    {
+        AddTrack(KeyCode.None);
+    }
+
+    void AddTrack(KeyCode key)
+    {
+        int trackIndex = keyCodes.Count;
+        Debug.Log(trackIndex);
+        keyCodes.Add(key);
+        GameObject newTrack = Instantiate(trackKeyPrefab, trackKeyContent);
+        newTrack.transform.GetComponentInChildren<TMP_Text>().text = key.ToString();
+        newTrack.transform.GetComponent<Button>().onClick.AddListener(() =>
+        {
+            m_recordKey = trackIndex;
+        });
+    }
+
+    public void RemoveTrack()
+    {
+        if (keyCodes.Count > 0)
+        {
+            keyCodes.RemoveAt(keyCodes.Count - 1);
+            Destroy(trackKeyContent.GetChild(trackKeyContent.childCount - 1).gameObject);
+        }
+    }
+
+    // -----------------------------------------------------------
 
     public void ChangeScene()
     {
@@ -171,6 +341,18 @@ public class LevelManager : MonoBehaviour
         m_mapManager.levelManager = this;
         m_mapManager.cameraTransform = noteManager.cameraTransform;
         StartCoroutine(ScanScene());
+    }
+
+    void ChangeStyle()
+    {
+        for (int i = parameterContent.childCount - 1; i >= 0; i--)
+        {
+            DestroyImmediate(parameterContent.GetChild(i).gameObject);
+        }
+        foreach (string prompt in m_parameterPrompts[Random.Range(0, m_parameterPrompts.Length)])
+        {
+            NewParameter(prompt);
+        }
     }
 
     void PopulateSongChoose()
@@ -197,7 +379,12 @@ public class LevelManager : MonoBehaviour
                 count++;
             }
         }
-        songContent.GetComponent<RectTransform>().sizeDelta = new Vector2(0, count * 80 + 40);
+    }
+
+    IEnumerator WaitForAudioManager()
+    {
+        yield return new WaitUntil(() => audioManager.IsReady);
+        Ready();
     }
 
     IEnumerator<UnityWebRequestAsyncOperation> LoadAudio(string name)
@@ -262,7 +449,7 @@ public class LevelManager : MonoBehaviour
         string targetPath = Path.Combine(Application.persistentDataPath, Path.GetFileName(sourcePath));
 
         File.Copy(sourcePath, targetPath);
-        
+
         PopulateSongChoose();
     }
 }

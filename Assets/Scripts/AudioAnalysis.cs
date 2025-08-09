@@ -1,9 +1,4 @@
 using UnityEngine;
-using System.Text;
-using NativeWebSocket;
-using System.Collections.Generic;
-using Newtonsoft.Json.Linq;
-using System;
 
 public class AudioAnalysis : MonoBehaviour
 {

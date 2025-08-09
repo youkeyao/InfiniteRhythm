@@ -449,7 +449,7 @@ Shader "Custom/NoiseSphere"
 
             // -----------------------------------------------
 
-            Varyings UnlitPassVertex(Attributes input)
+            Varyings DepthOnlyVertex(Attributes input)
             {
                 Varyings output = (Varyings)0;
 
@@ -484,7 +484,7 @@ Shader "Custom/NoiseSphere"
                 return output;
             }
 
-            float UnlitPassFragment(Varyings input) : SV_Target
+            float DepthOnlyFragment(Varyings input) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
