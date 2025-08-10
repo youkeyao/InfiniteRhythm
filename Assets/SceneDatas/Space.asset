@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d71537c3367f538468b22d7683bc044f, type: 3}
   m_Name: Space
   m_EditorClassIdentifier: 
+  terrainPrefab: {fileID: 5325718046234451745, guid: eb25ed1f472e17842ad561599cea7840, type: 3}
   landDatas:
   - offset: {x: 0, y: 5, z: 0}
     rotation: {x: 0, y: 0, z: 0}

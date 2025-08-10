@@ -23,6 +23,10 @@ public class AudioAnalysis : MonoBehaviour
     float m_lastBeatE = 0;
     float m_beatValue = 0;
 
+    const int SpreadNum = 10;
+    int m_spreadIndex = 0;
+    float[] m_spreadTime = new float[SpreadNum];
+
     void Update()
     {
         if (levelManager.IsPlaying)
@@ -32,6 +36,10 @@ public class AudioAnalysis : MonoBehaviour
             if (maxSpectrum > swingThreshold && Mathf.Abs(m_swingValue) < swingTransitionThreshold)
             {
                 m_swingTarget = -Mathf.Sign(m_swingTarget) * swingScale * maxSpectrum;
+            }
+            if (maxSpectrum > 2 * swingThreshold)
+            {
+                levelManager.ChangeScene();
             }
             float nowSwingE = m_swingTarget - m_swingValue;
             m_swingValue += (swingPI[0] * (nowSwingE - m_lastSwingE) + swingPI[1] * nowSwingE) * Time.deltaTime;
@@ -56,6 +64,25 @@ public class AudioAnalysis : MonoBehaviour
             }
             m_lastBeatE = nowBeatE;
             Shader.SetGlobalFloat("_Beat", m_beatValue);
+
+            // Spread
+            if (spectrumData[4] > beatThreshold)
+            {
+                m_spreadTime[m_spreadIndex] = 1;
+                m_spreadIndex = (m_spreadIndex + 1) % SpreadNum;
+            }
+            for (int i = 0; i < SpreadNum; i++)
+            {
+                if (m_spreadTime[i] > 0)
+                {
+                    m_spreadTime[i] -= Time.deltaTime;
+                    if (m_spreadTime[i] < 0)
+                    {
+                        m_spreadTime[i] = 0;
+                    }
+                }
+            }
+            Shader.SetGlobalFloatArray("_SpreadTime", m_spreadTime);
         }
     }
 }

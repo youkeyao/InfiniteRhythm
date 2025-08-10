@@ -52,6 +52,11 @@ public class NoteManager : MonoBehaviour
     int m_hit = 0;
     int m_miss = 0;
 
+    const int HitSpreadNum = 10;
+    int m_hitSpreadIndex = 0;
+    float[] m_hitTrack = new float[HitSpreadNum];
+    float[] m_hitSpreadTime = new float[HitSpreadNum];
+
     MaterialPropertyBlock m_propertyBlock;
 
     public void Init()
@@ -73,6 +78,7 @@ public class NoteManager : MonoBehaviour
             m_lineVertices.Add(new Queue<Vector3>());
             m_linePropertyBlock.Add(new MaterialPropertyBlock());
         }
+        roadMaterial.SetInt("_NumTracks", levelManager.NumTracks);
         m_propertyBlock = new MaterialPropertyBlock();
     }
 
@@ -103,6 +109,7 @@ public class NoteManager : MonoBehaviour
             GenerateRoad();
             GenerateNote();
             HitNote();
+            Shader.SetGlobalFloat("_Combo", m_combo >= m_comboCycle ? 1 : 0);
         }
 
         // Draw
@@ -159,6 +166,9 @@ public class NoteManager : MonoBehaviour
         if (vertices.Count >= 4)
         {
             int[] indices = new int[(vertices.Count - 2) * 3];
+            Vector2[] uvs = new Vector2[vertices.Count];
+            uvs[0] = new Vector2(0, 0);
+            uvs[1] = new Vector2(1, 0);
             int count = 0;
             for (int i = 3; i < vertices.Count; i += 2)
             {
@@ -168,10 +178,13 @@ public class NoteManager : MonoBehaviour
                 indices[count++] = i - 1;
                 indices[count++] = i - 0;
                 indices[count++] = i - 2;
+                uvs[i - 1] = new Vector2(0, 0);
+                uvs[i - 0] = new Vector2(1, 0);
             }
             mesh.Clear();
             mesh.vertices = vertices.ToArray();
             mesh.triangles = indices;
+            mesh.uv = uvs;
         }
     }
 
@@ -181,12 +194,12 @@ public class NoteManager : MonoBehaviour
         float spacing = -transform.position.x * 2 / (levelManager.NumTracks - 1);
 
         // Dispose
-        while (m_noteSpawnTime.Count > 0 && m_noteSpawnTime[0] < currentTime - 1)
+        while (m_noteSpawnTime.Count > 0 && m_noteSpawnTime[0] < currentTime - 0.5f)
         {
             m_noteSpawnTime.RemoveAt(0);
             m_noteSpawnList.RemoveAt(0);
             m_combo = 0;
-            m_miss = 0;
+            m_miss++;
         }
 
         // Spawn
@@ -218,15 +231,20 @@ public class NoteManager : MonoBehaviour
                 break;
             if (targetDistance > -hitThreshold)
             {
+                bool isHit = false;
                 for (int j = 0; j < levelManager.NumTracks; j++)
                 {
                     Vector3 trackPosition = targetPosition + targetTransform.MultiplyVector(Vector3.right * (transform.position.x + j * spacing));
                     if (Input.GetKeyDown(levelManager.keyCodes[j]) && Mathf.Abs(Vector3.Dot(trackPosition - position, trackDirection)) < m_trackThreshold)
                     {
+                        isHit = true;
                         m_hit++;
                         m_combo++;
 
                         StartCoroutine(HitRoutine(j));
+                        m_hitTrack[m_hitSpreadIndex] = j;
+                        m_hitSpreadTime[m_hitSpreadIndex] = 1;
+                        m_hitSpreadIndex = (m_hitSpreadIndex + 1) % HitSpreadNum;
 
                         GameObject effect = Instantiate(noteEffect, controllerTransform);
                         effect.transform.position = position;
@@ -239,14 +257,30 @@ public class NoteManager : MonoBehaviour
                         i--;
                     }
                 }
+                if (isHit) break;
             }
         }
+
+        for (int i = 0; i < HitSpreadNum; i++)
+        {
+            if (m_hitSpreadTime[i] > 0)
+            {
+                m_hitSpreadTime[i] -= Time.deltaTime;
+                if (m_hitSpreadTime[i] < 0)
+                {
+                    m_hitSpreadTime[i] = 0;
+                    m_hitTrack[i] = 1000;
+                }
+            }
+        }
+        Shader.SetGlobalFloatArray("_HitTrack", m_hitTrack);
+        Shader.SetGlobalFloatArray("_HitSpreadTime", m_hitSpreadTime);
     }
 
     IEnumerator HitRoutine(int trackID)
     {
         float elapsed = 0f;
-        bool isCombo = m_combo % m_comboCycle == 0;
+        bool isCombo = m_combo == m_comboCycle;
         Vector3 initPosition = cameraTransform.localPosition;
         Renderer renderer = m_hitHints[trackID].GetComponentInChildren<Renderer>();
         while (elapsed < hitEffectDuration)

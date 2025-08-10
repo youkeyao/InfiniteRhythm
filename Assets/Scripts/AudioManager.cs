@@ -65,6 +65,7 @@ public class AudioManager : MonoBehaviour
         {
             Debug.Log("WebSocket Closed: " + e);
             m_isSetup = false;
+            levelManager.Stop();
         };
         m_webSocket.OnMessage += (bytes) =>
         {
@@ -178,7 +179,7 @@ public class AudioManager : MonoBehaviour
         m_audioClips.Enqueue(audioClip);
     }
 
-    public void AddAudioClip(AudioClip audioClip)
+    public void SetAudioClip(AudioClip audioClip)
     {
         float[] samples = new float[audioClip.samples * audioClip.channels];
         audioClip.GetData(samples, 0);
@@ -186,7 +187,8 @@ public class AudioManager : MonoBehaviour
         // generate chart
         ChartGenerator.Generate(samples, audioClip.frequency, m_audioLength, levelManager.NumTracks);
         m_audioLength += audioClip.length;
-        m_audioClips.Enqueue(audioClip);
+        m_audioSource.clip = audioClip;
+        m_audioSource.Play();
     }
 
     void Update()

@@ -26,6 +26,7 @@ public struct ItemData
 [CreateAssetMenu(menuName = "SceneData")]
 public class SceneData : ScriptableObject
 {
+    public GameObject terrainPrefab;
     // land
     public LandData[] landDatas;
 

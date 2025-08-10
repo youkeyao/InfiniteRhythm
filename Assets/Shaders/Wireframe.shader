@@ -4,7 +4,11 @@ Shader "Custom/Wireframe"
     {
         _Thickness ("Thickness", RANGE(0, 800)) = 100
 		_Smoothness ("Smoothness", RANGE(0, 20)) = 3
-		_BaseColor ("Base Color", Color) = (0.0, 0.0, 0.0, 0.0)
+		_ColorA ("Color A", Color) = (0.0, 0.0, 0.0, 0.0)
+        _ColorB ("Color B", Color) = (0.0, 0.0, 0.0, 0.0)
+        _PeakColor ("Peak Color", Color) = (1.0, 1.0, 1.0, 1.0)
+        _ComboColor ("Combo Color", Color) = (1.0, 0.0, 0.0, 1.0)
+        _NoiseScale ("Noise Scale", Float) = 1.0
     }
 
     SubShader
@@ -36,17 +40,26 @@ Shader "Custom/Wireframe"
             // -------------------------------------
             // Includes
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceInput.hlsl"
+            #define SpreadNum 10
 
             CBUFFER_START(UnityPerMaterial)
-                half4 _BaseColor;
+                half4 _ColorA;
+                half4 _ColorB;
+                half4 _PeakColor;
+                half4 _ComboColor;
                 float _Thickness;
                 float _Smoothness;
+                float _NoiseScale;
             CBUFFER_END
+            float _Combo;
+            float _Beat;
             float _Clip;
             float _ClipSign;
+            float _HitSpreadTime[SpreadNum];
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Unlit.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "PerlinNoise.hlsl"
 
             struct Attributes
             {
@@ -59,6 +72,8 @@ Shader "Custom/Wireframe"
             {
                 float4 positionCS : SV_POSITION;
                 float cameraDist : TEXCOORD1;
+                float bump : TEXCOORD2;
+                float noise : TEXCOORD3;
 
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
@@ -68,6 +83,8 @@ Shader "Custom/Wireframe"
                 float4 positionCS : SV_POSITION;
                 float cameraDist : TEXCOORD1;
                 float3 dist : TEXCOORD2;
+                float bump : TEXCOORD3;
+                float noise : TEXCOORD4;
 
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
@@ -81,9 +98,26 @@ Shader "Custom/Wireframe"
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
 
+                // bump
                 float3 cameraPos = mul(UNITY_MATRIX_MV, input.positionOS);
+                float bump = 0;
+                for (int i = 0; i < SpreadNum; i ++)
+                {
+                    float dist = abs(cameraPos.x) - (1 - _HitSpreadTime[i]) * 300;
+                    bump += exp(-dist * dist / 10) * PerlinNoise(cameraPos);
+                }
+                bump *= 5;
+                input.positionOS += float4(0, bump, 0, 0);
+
+                cameraPos = mul(UNITY_MATRIX_MV, input.positionOS);
                 output.cameraDist = dot(cameraPos, cameraPos);
                 output.positionCS = mul(UNITY_MATRIX_MVP, input.positionOS);
+                output.bump = bump;
+                output.noise = PerlinNoise(mul(UNITY_MATRIX_M, input.positionOS) * _NoiseScale) + _Beat;
+                if (output.noise > 1.0)
+                {
+                    output.noise -= 1.0;
+                }
 
                 return output;
             }
@@ -107,16 +141,22 @@ Shader "Custom/Wireframe"
                 output.positionCS = input[0].positionCS;
                 output.cameraDist = input[0].cameraDist;
                 output.dist = float3( (area / length(edge0)), 0.0, 0.0) * wireThickness;
+                output.bump = input[0].bump;
+                output.noise = input[0].noise;
                 triStream.Append(output);
 
                 output.positionCS = input[1].positionCS;
                 output.cameraDist = input[1].cameraDist;
                 output.dist = float3(0.0, (area / length(edge1)), 0.0) * wireThickness;
+                output.bump = input[1].bump;
+                output.noise = input[1].noise;
                 triStream.Append(output);
 
                 output.positionCS = input[2].positionCS;
                 output.cameraDist = input[2].cameraDist;
                 output.dist = float3(0.0, 0.0, (area / length(edge2))) * wireThickness;
+                output.bump = input[2].bump;
+                output.noise = input[2].noise;
                 triStream.Append(output);
 
                 triStream.RestartStrip();
@@ -131,11 +171,13 @@ Shader "Custom/Wireframe"
                 if (minDistanceToEdge > 0.9)
                 {
                     clip(-1);
-                    return half4(_BaseColor.rgb, 0);
+                    return half4(_ColorA.rgb, 0);
                 }
 
                 float alpha = exp2(_Smoothness * -1.0 * minDistanceToEdge * minDistanceToEdge);
-                return half4(_BaseColor.rgb, alpha);
+                float3 color = lerp(_ColorA.rgb, _ColorB.rgb, input.noise);
+                color = lerp(color, _PeakColor.rgb, input.bump);
+                return half4(color + _Combo * _ComboColor.rgb, alpha);
             }
 
             ENDHLSL
@@ -179,17 +221,20 @@ Shader "Custom/Wireframe"
             // -------------------------------------
             // Includes
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceInput.hlsl"
+            #define SpreadNum 10
 
             CBUFFER_START(UnityPerMaterial)
-                half4 _BaseColor;
                 float _Thickness;
                 float _Smoothness;
+                float _NoiseScale;
             CBUFFER_END
             float _Clip;
             float _ClipSign;
+            float _HitSpreadTime[SpreadNum];
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Unlit.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "PerlinNoise.hlsl"
 
             struct Attributes
             {
@@ -225,6 +270,16 @@ Shader "Custom/Wireframe"
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
 
                 float3 cameraPos = mul(UNITY_MATRIX_MV, input.positionOS);
+                float bump = 0;
+                for (int i = 0; i < SpreadNum; i ++)
+                {
+                    float dist = abs(cameraPos.x) - (1 - _HitSpreadTime[i]) * 300;
+                    bump += exp(-dist * dist / 200) * PerlinNoise(cameraPos);
+                }
+                bump *= 2;
+                input.positionOS += float4(0, bump, 0, 0);
+
+                cameraPos = mul(UNITY_MATRIX_MV, input.positionOS);
                 output.cameraDist = dot(cameraPos, cameraPos);
                 output.positionCS = mul(UNITY_MATRIX_MVP, input.positionOS);
 
@@ -274,7 +329,7 @@ Shader "Custom/Wireframe"
                 if (minDistanceToEdge > 0.9)
                 {
                     clip(-1);
-                    return half4(_BaseColor.rgb, 0);
+                    return 0;
                 }
 
                 return input.positionCS.z;

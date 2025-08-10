@@ -12,6 +12,7 @@ public class MapManager : MonoBehaviour
     float m_startTime = 0;
     float m_clipSign = 1;
     SceneData m_sceneData;
+    GameObject m_terrain;
     float[] m_landDistances;
     List<List<int>> m_landValidMesh = new List<List<int>>();
     List<Queue<Matrix4x4>> m_landSpawnQueues = new List<Queue<Matrix4x4>>();
@@ -42,9 +43,20 @@ public class MapManager : MonoBehaviour
         {
             m_itemSpawnQueues.Add(new Queue<Matrix4x4>());
         }
+        if (m_sceneData.terrainPrefab != null)
+        {
+            m_terrain = Instantiate(m_sceneData.terrainPrefab, cameraTransform);
+        }
         m_startTime = Time.time;
     }
 
+    void OnDestroy()
+    {
+        if (m_terrain != null)
+        {
+            Destroy(m_terrain);
+        }
+    }
 
     public void SetSceneData(SceneData data)
     {

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Unity.Collections;
 using UnityEngine;
@@ -10,129 +11,146 @@ public struct Note
 
 public static class ChartGenerator
 {
+    const int SubBandsNum = 4;
     const int HistorySize = 43;
 
-    public static float interval = 0.2f;
-    public static int windowSize = 1024;
-    public static int moveLength = 1024;
-    public static float sensitivity = 1.0f;
-    public static float restTime = 1;
-    public static float energyThreshold = 1e-2f;
+    public static float minInterval = 0.2f;
+    public static int windowSize = 2048;
+    public static int moveLength = 2048;
+    public static int firstBandWidth = 10;
+    public static int allBandWidth = 64;
+    public static float restTime = 2;
+    public static float sensitivity = 3.0f;
+    public static float energyThreshold = 1.5f;
 
-    static float[] s_energyHistory = new float[HistorySize];
-    static int s_historyIndex = -1;
-    static int s_lastTrack = 0;
-    static float s_lastEnergy = 0;
-    static float s_lastTime = 0;
     static Queue<Note> s_notes = new Queue<Note>();
+    static float[] s_subBandWidths = GenerateSubBandWidth(SubBandsNum, allBandWidth);
+    static float[] s_window = GenerateHanningWindow(windowSize);
+    static float[,] s_energyHistory = new float[SubBandsNum, HistorySize];
+    static int s_historyIndex = 0;
+    static float s_lastTime = -1;
+    static int s_lastBand = -1;
 
     public static void Clear()
     {
-        s_historyIndex = -1;
-        s_lastTrack = 0;
-        s_lastEnergy = 0;
-        s_lastTime = 0;
         s_notes.Clear();
+        s_historyIndex = 0;
+        s_lastTime = -1;
+        s_lastBand = -1;
+        Array.Clear(s_energyHistory, 0, s_energyHistory.Length);
     }
 
-    public static Queue<Note> GetChart()
-    {
-        return s_notes;
-    }
+    public static Queue<Note> GetChart() => s_notes;
 
     public static void Generate(float[] samples, int sampleRate, float timeOffset, int numTracks)
     {
-        Debug.Log(DetectBPM(samples, sampleRate, 40, 200));
-        NativeArray<float> segment = new NativeArray<float>(windowSize, Allocator.TempJob);
-        for (int sampleIndex = 0; sampleIndex < samples.Length; sampleIndex += moveLength)
+        using (BurstFFT fft = new BurstFFT(windowSize))
         {
-            float energy = 0;
-            for (int i = 0; i < windowSize; i++)
+            NativeArray<float> segment = new NativeArray<float>(windowSize, Allocator.TempJob);
+            for (int sampleIndex = 0; sampleIndex < samples.Length; sampleIndex += moveLength)
             {
-                if (sampleIndex + i * 2 >= samples.Length)
-                    break;
-                float sample = samples[sampleIndex + i * 2];
-                energy += sample * sample;
-            }
-            energy /= windowSize;
-
-            float currentTime = (float)(sampleIndex + windowSize) / sampleRate / 2 + timeOffset;
-            if (currentTime > restTime)
-            {
-                float average = 0;
-                for (int j = 0; j < HistorySize; j++)
+                // Get Spectrum
+                for (int i = 0; i < windowSize; i++)
                 {
-                    average += s_energyHistory[j];
+                    if (sampleIndex + i * 2 >= samples.Length)
+                        break;
+                    segment[i] = (samples[sampleIndex + i * 2] + samples[sampleIndex + i * 2 + 1]) / 2 * s_window[i];
                 }
-                average /= HistorySize;
+                fft.Transform(segment);
+                NativeArray<float> spectrum = fft.Spectrum;
+                float[] subBandEnergies = GenerateSubBandEnergy(spectrum, s_subBandWidths);
 
-                float variance = 0;
-                for (int j = 0; j < HistorySize; j++)
+                float currentTime = (float)(sampleIndex) / sampleRate / 2 + timeOffset;
+                for (int i = 0; i < SubBandsNum; i++)
                 {
-                    variance += Mathf.Pow(s_energyHistory[j] - average, 2);
-                }
-                variance /= HistorySize;
-
-                float C = 1.5142857f - variance / average / average * 0.025714f;
-                if (energy > energyThreshold && energy > sensitivity * C * average && currentTime - s_lastTime > interval)
-                {
-                    int track = Mathf.Abs(energy - s_lastEnergy) > 10 * variance ? Random.Range(0, numTracks) : s_lastTrack;
-                    s_notes.Enqueue(new Note
+                    if (currentTime > restTime)
                     {
-                        time = currentTime,
-                        track = track
-                    });
-                    s_lastTrack = track;
-                    s_lastEnergy = energy;
-                    s_lastTime = currentTime;
-                }
-            }
+                        float average = 0;
+                        for (int j = 0; j < HistorySize; j++)
+                        {
+                            average += s_energyHistory[i, j];
+                        }
+                        average /= HistorySize;
 
-            s_historyIndex = (s_historyIndex + 1) % HistorySize;
-            s_energyHistory[s_historyIndex] = energy;
+                        float variance = 0;
+                        for (int j = 0; j < HistorySize; j++)
+                        {
+                            variance += Mathf.Pow(s_energyHistory[i, j] - average, 2);
+                        }
+                        variance /= HistorySize;
+
+                        float C = Mathf.Max(1.5142857f - variance / average / average * 0.0025714f, energyThreshold);
+                        float V0 = 0.2f * average * average;
+                        if (subBandEnergies[i] > sensitivity * C * average && variance > sensitivity * V0 && currentTime - s_lastTime > minInterval)
+                        {
+                            int lastTrack = s_notes.Count > 0 ? s_notes.Peek().track : -1;
+                            int track = lastTrack;
+                            if (s_lastBand != i)
+                            {
+                                while (track == lastTrack)
+                                {
+                                    track = UnityEngine.Random.Range(0, numTracks);
+                                }
+                            }
+                            s_notes.Enqueue(new Note
+                            {
+                                time = currentTime,
+                                track = track,
+                            });
+                            s_lastTime = currentTime;
+                            break;
+                        }
+                    }
+
+                    s_energyHistory[i, s_historyIndex] = subBandEnergies[i];
+                }
+                s_historyIndex = (s_historyIndex + 1) % HistorySize;
+            }
+            segment.Dispose();
         }
-        segment.Dispose();
     }
 
-    static float DetectBPM(float[] samples, float sr, float bpmMin, float bpmMax)
+    private static float[] GenerateHanningWindow(int size)
     {
-        // 能量包络
-        int hop = 512;
-        List<float> energyEnv = new List<float>();
-        for (int i = 0; i < samples.Length - hop; i += hop)
+        float[] window = new float[size];
+        for (int i = 0; i < size; i++)
         {
-            float sum = 0f;
-            for (int j = 0; j < hop; j++)
-                sum += samples[i + j] * samples[i + j];
-            energyEnv.Add(sum);
+            window[i] = 0.54f - 0.46f * Mathf.Cos(2 * Mathf.PI * i / (size - 1));
         }
+        return window;
+    }
 
-        // 中心化
-        float mean = 0f;
-        foreach (var e in energyEnv) mean += e;
-        mean /= energyEnv.Count;
-        for (int i = 0; i < energyEnv.Count; i++)
-            energyEnv[i] -= mean;
+    private static float[] GenerateSubBandWidth(int num, int totalWidth)
+    {
+        float[] subBandWidths = new float[num];
 
-        // 自相关
-        int minLag = Mathf.RoundToInt((60f / bpmMax) * sr / hop);
-        int maxLag = Mathf.RoundToInt((60f / bpmMin) * sr / hop);
-
-        float bestCorr = 0f;
-        int bestLag = minLag;
-        for (int lag = minLag; lag <= maxLag; lag++)
+        int b = firstBandWidth;
+        int a = (totalWidth - b * num) * 2 / (num * (num + 1));
+        for (int i = 0; i < num; i++)
         {
-            float corr = 0f;
-            for (int i = 0; i < energyEnv.Count - lag; i++)
-                corr += energyEnv[i] * energyEnv[i + lag];
-            if (corr > bestCorr)
+            subBandWidths[i] = a * i + b;
+        }
+        return subBandWidths;
+    }
+
+    private static float[] GenerateSubBandEnergy(NativeArray<float> spectrum, float[] subBandWidths)
+    {
+        int numBands = subBandWidths.Length;
+        float[] subBandEnergies = new float[numBands];
+        int band = 0;
+        float bandWidth = 0;
+
+        for (int i = 0; i < spectrum.Length / 2; i++)
+        {
+            if (i >= bandWidth + subBandWidths[band])
             {
-                bestCorr = corr;
-                bestLag = lag;
+                bandWidth += subBandWidths[band];
+                band++;
+                if (band >= numBands)
+                    break;
             }
+            subBandEnergies[band] += spectrum[i] * spectrum[i] / subBandWidths[band];
         }
-
-        float secondsPerBeat = (bestLag * hop) / sr;
-        return 60f / secondsPerBeat;
+        return subBandEnergies;
     }
 }
