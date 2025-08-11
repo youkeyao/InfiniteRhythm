@@ -61,7 +61,7 @@ public class LevelManager : MonoBehaviour
 
     string[][] m_parameterPrompts = {
         new string[] { "rhythm", "synthwave" },
-        new string[] { "chillwave", "Bossa Nova" },
+        new string[] { "groove", "cybersynth" },
     };
 
     void Start()
@@ -106,7 +106,7 @@ public class LevelManager : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Escape))
+        if (m_isPlaying && Input.GetKeyDown(KeyCode.Escape))
         {
             Pause();
         }
@@ -145,14 +145,6 @@ public class LevelManager : MonoBehaviour
         settingsUI.SetActive(false);
         noteManager.Init();
         ChangeScene();
-    }
-
-    void Ready()
-    {
-        Time.timeScale = 1;
-        m_isPlaying = true;
-        m_startTime = Time.time;
-        loadingUI.SetActive(false);
     }
 
     public void Pause()
@@ -412,10 +404,10 @@ public class LevelManager : MonoBehaviour
     IEnumerator WaitForAudioManager()
     {
         yield return new WaitUntil(() => audioManager.IsReady);
-        Ready();
+        yield return Ready();
     }
 
-    IEnumerator<UnityWebRequestAsyncOperation> LoadAudio(string name)
+    IEnumerator LoadAudio(string name)
     {
         string audioFile = Path.Combine(Application.persistentDataPath, name);
 
@@ -440,7 +432,19 @@ public class LevelManager : MonoBehaviour
             audioManager.SetAudioClip(audioClip);
         }
 
-        Ready();
+        yield return Ready();
+    }
+
+    IEnumerator Ready()
+    {
+        Time.timeScale = 1;
+        m_isPlaying = true;
+        m_startTime = Time.time;
+
+        yield return new WaitUntil(() => audioManager.Time > 0);
+
+        m_startTime = Time.time - audioManager.Time;
+        loadingUI.SetActive(false);
     }
 
     IEnumerator ScanScene()

@@ -66,11 +66,7 @@ public class AudioAnalysis : MonoBehaviour
             Shader.SetGlobalFloat("_Beat", m_beatValue);
 
             // Spread
-            if (spectrumData[4] > beatThreshold)
-            {
-                m_spreadTime[m_spreadIndex] = 1;
-                m_spreadIndex = (m_spreadIndex + 1) % SpreadNum;
-            }
+            float lastSpread = 0;
             for (int i = 0; i < SpreadNum; i++)
             {
                 if (m_spreadTime[i] > 0)
@@ -80,7 +76,16 @@ public class AudioAnalysis : MonoBehaviour
                     {
                         m_spreadTime[i] = 0;
                     }
+                    if (m_spreadTime[i] > lastSpread)
+                    {
+                        lastSpread = m_spreadTime[i];
+                    }
                 }
+            }
+            if (spectrumData[4] > beatThreshold && lastSpread < 0.7f)
+            {
+                m_spreadTime[m_spreadIndex] = 1;
+                m_spreadIndex = (m_spreadIndex + 1) % SpreadNum;
             }
             Shader.SetGlobalFloatArray("_SpreadTime", m_spreadTime);
         }

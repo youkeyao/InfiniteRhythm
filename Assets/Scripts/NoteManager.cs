@@ -8,6 +8,7 @@ public class NoteManager : MonoBehaviour
     public LevelManager levelManager;
     public Transform controllerTransform;
     public Transform cameraTransform;
+    public Transform comboTransform;
     public GameObject hitPrefab;
 
     // note
@@ -280,7 +281,7 @@ public class NoteManager : MonoBehaviour
     IEnumerator HitRoutine(int trackID)
     {
         float elapsed = 0f;
-        bool isCombo = m_combo == m_comboCycle;
+        bool isCombo = m_combo % m_comboCycle == 0;
         Vector3 initPosition = cameraTransform.localPosition;
         Renderer renderer = m_hitHints[trackID].GetComponentInChildren<Renderer>();
         while (elapsed < hitEffectDuration)
@@ -293,6 +294,7 @@ public class NoteManager : MonoBehaviour
             if (isCombo)
             {
                 cameraTransform.localPosition = initPosition + new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f), 0) * shakeMagnitude;
+                comboTransform.localScale = Vector3.one * (hitStrength + 1);
             }
 
             // hit color

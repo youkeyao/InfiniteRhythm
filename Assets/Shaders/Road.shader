@@ -138,11 +138,12 @@ Shader "Custom/Road"
                 half2 uv = input.uv;
                 half4 texColor = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv);
                 half4 baseColor = _BaseColor;
+                float time = 0.5;
                 for (int i = 0; i < SpreadNum; i++)
                 {
-                    float xpos = abs(input.uv.x - (_HitTrack[i] + 0.5) / _NumTracks) * _NumTracks;
+                    float xpos = abs(input.uv.x * _NumTracks - (_HitTrack[i] + 0.5)) * time;
                     float dist = xpos - (1 - _HitSpreadTime[i]);
-                    baseColor += _HitColor * exp(-dist * dist * 50) * saturate(0.5 - xpos);
+                    baseColor += _HitColor * exp(-dist * dist * 100) * saturate(time / 2 - xpos);
                 }
                 half3 color = texColor.rgb * baseColor.rgb;
                 half alpha = texColor.a * baseColor.a;

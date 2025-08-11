@@ -2,7 +2,6 @@ Library/
 Logs/
 UserSettings/
 Temp/
-Build/
 .vscode/
 .idea/
 *.sln

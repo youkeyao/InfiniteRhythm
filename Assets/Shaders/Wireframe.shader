@@ -104,7 +104,7 @@ Shader "Custom/Wireframe"
                 for (int i = 0; i < SpreadNum; i ++)
                 {
                     float dist = abs(cameraPos.x) - (1 - _HitSpreadTime[i]) * 300;
-                    bump += exp(-dist * dist / 10) * PerlinNoise(cameraPos);
+                    bump += exp(-dist * dist / 200) * PerlinNoise(cameraPos) * (1 - exp(-cameraPos.x * cameraPos.x / 500));
                 }
                 bump *= 5;
                 input.positionOS += float4(0, bump, 0, 0);
@@ -269,6 +269,7 @@ Shader "Custom/Wireframe"
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
 
+                // bump
                 float3 cameraPos = mul(UNITY_MATRIX_MV, input.positionOS);
                 float bump = 0;
                 for (int i = 0; i < SpreadNum; i ++)
@@ -276,7 +277,7 @@ Shader "Custom/Wireframe"
                     float dist = abs(cameraPos.x) - (1 - _HitSpreadTime[i]) * 300;
                     bump += exp(-dist * dist / 200) * PerlinNoise(cameraPos);
                 }
-                bump *= 2;
+                bump *= 5;
                 input.positionOS += float4(0, bump, 0, 0);
 
                 cameraPos = mul(UNITY_MATRIX_MV, input.positionOS);

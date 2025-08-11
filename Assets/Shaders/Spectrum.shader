@@ -128,7 +128,7 @@ Shader "Custom/Spectrum"
 
                 float3 translation = TransformObjectToWorld(float3(0, 0, 0));
                 float noiseScale = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _NoiseScale);
-                float noiseRaw = (PerlinNoise(translation * noiseScale) + 0.8) / 1.6;
+                float noiseRaw = (PerlinNoise(translation * noiseScale) + 1.0) / 2;
                 int spectrumIndex = noiseRaw * (SAMPLE_NUM - 1);
                 float spectrum = _Spectrum[spectrumIndex] * 200;
                 input.positionOS.y *= spectrum + 1;
@@ -264,7 +264,7 @@ Shader "Custom/Spectrum"
 
                 float3 translation = TransformObjectToWorld(float3(0, 0, 0));
                 float noiseScale = UNITY_ACCESS_INSTANCED_PROP(UnityPerMaterial, _NoiseScale);
-                float noiseRaw = (PerlinNoise(translation * noiseScale) + 0.8) / 1.6;
+                float noiseRaw = (PerlinNoise(translation * noiseScale) + 1.0) / 2;
                 int spectrumIndex = noiseRaw * (SAMPLE_NUM - 1);
                 float spectrum = _Spectrum[spectrumIndex] * 200;
                 input.positionOS.y *= spectrum + 1;

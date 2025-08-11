@@ -26,6 +26,7 @@ public class AudioManager : MonoBehaviour
     public int numChannels = 2;
 
     public bool IsReady => m_isSetup && m_audioClips.Count > bufferSize;
+    public float Time => m_audioSource.time;
 
     Dictionary<string, float> m_weightedPrompts = new Dictionary<string, float>();
     float m_temperature = 1.0f;
@@ -65,7 +66,8 @@ public class AudioManager : MonoBehaviour
         {
             Debug.Log("WebSocket Closed: " + e);
             m_isSetup = false;
-            levelManager.Stop();
+            if (levelManager.IsPlaying)
+                levelManager.Stop();
         };
         m_webSocket.OnMessage += (bytes) =>
         {
@@ -84,6 +86,10 @@ public class AudioManager : MonoBehaviour
         if (m_webSocket.State != WebSocketState.Open)
         {
             m_webSocket.Connect();
+        }
+        else
+        {
+            Setup();
         }
     }
 
@@ -247,6 +253,8 @@ public class AudioManager : MonoBehaviour
         m_audioLength = 0;
         m_audioClips.Clear();
         m_audioSource.clip = null;
+        m_isSetup = false;
+        Stop();
     }
 
     async void Play()

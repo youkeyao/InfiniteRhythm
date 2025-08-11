@@ -60,7 +60,9 @@ public static class ChartGenerator
                 NativeArray<float> spectrum = fft.Spectrum;
                 float[] subBandEnergies = GenerateSubBandEnergy(spectrum, s_subBandWidths);
 
-                float currentTime = (float)(sampleIndex) / sampleRate / 2 + timeOffset;
+                float currentTime = (float)(sampleIndex + windowSize) / sampleRate / 2 + timeOffset;
+                int maxBand = -1;
+                float maxRate = 0;
                 for (int i = 0; i < SubBandsNum; i++)
                 {
                     if (currentTime > restTime)
@@ -83,26 +85,35 @@ public static class ChartGenerator
                         float V0 = 0.2f * average * average;
                         if (subBandEnergies[i] > sensitivity * C * average && variance > sensitivity * V0 && currentTime - s_lastTime > minInterval)
                         {
-                            int lastTrack = s_notes.Count > 0 ? s_notes.Peek().track : -1;
-                            int track = lastTrack;
-                            if (s_lastBand != i)
+                            if (subBandEnergies[i] / average > maxRate)
                             {
-                                while (track == lastTrack)
-                                {
-                                    track = UnityEngine.Random.Range(0, numTracks);
-                                }
+                                maxBand = i;
+                                maxRate = subBandEnergies[i] / average;
                             }
-                            s_notes.Enqueue(new Note
-                            {
-                                time = currentTime,
-                                track = track,
-                            });
-                            s_lastTime = currentTime;
-                            break;
                         }
                     }
 
                     s_energyHistory[i, s_historyIndex] = subBandEnergies[i];
+                }
+
+                if (maxBand >= 0)
+                {
+                    int lastTrack = s_notes.Count > 0 ? s_notes.Peek().track : -1;
+                    int track = lastTrack;
+                    if (s_lastBand != maxBand)
+                    {
+                        while (track == lastTrack)
+                        {
+                            track = UnityEngine.Random.Range(0, numTracks);
+                        }
+                    }
+                    s_notes.Enqueue(new Note
+                    {
+                        time = currentTime,
+                        track = track,
+                    });
+                    s_lastBand = maxBand;
+                    s_lastTime = currentTime;
                 }
                 s_historyIndex = (s_historyIndex + 1) % HistorySize;
             }
