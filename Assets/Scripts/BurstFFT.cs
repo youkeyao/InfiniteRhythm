@@ -1,8 +1,9 @@
+#define SINGLE_THREAD
+
 using System.Linq;
 using Unity.Collections;
 using Unity.Mathematics;
 using Unity.Jobs;
-using Unity.Burst;
 
 // Cooley–Tukey FFT vectorized/parallelized with the Burst compiler
 
@@ -30,6 +31,31 @@ public sealed class BurstFFT : System.IDisposable
         if (_O.IsCreated) _O.Dispose();
     }
 
+    #if SINGLE_THREAD
+
+    public void Transform(NativeArray<float> input)
+    {
+        var X = new NativeArray<float4>(_N / 2, Allocator.TempJob);
+
+        // Bit-reversal permutation and first DFT pass
+        new FirstPassJob { I = input, P = _P, X = X }.Run(_N / 2);
+
+        // 2nd and later DFT passes
+        for (var i = 0; i < _logN - 1; i++)
+        {
+            var T_slice = new NativeSlice<TFactor>(_T, _N / 4 * i);
+            new DftPassJob { T = T_slice, X = X }.Run(_N / 4);
+        }
+
+        // Postprocess (power spectrum calculation)
+        var O2 = _O.Reinterpret<float2>(sizeof(float));
+        new PostprocessJob { X = X, O = O2, s = 2.0f / _N }.Run(_N / 2);
+
+        X.Dispose();
+    }
+
+    #else
+
     public void Transform(NativeArray<float> input)
     {
         var X = new NativeArray<float4>(_N / 2, Allocator.TempJob);
@@ -54,6 +80,8 @@ public sealed class BurstFFT : System.IDisposable
         handle.Complete();
         X.Dispose();
     }
+
+    #endif
 
     #endregion
 
@@ -108,17 +136,15 @@ public sealed class BurstFFT : System.IDisposable
             for (var k = 0; k < _N; k += m)
                 for (var j = 0; j < m / 2; j += 2)
                     _T[i++] = new TFactor
-                    {
-                        I = math.int2((k + j) / 2, (k + j + m / 2) / 2),
-                        W = math.cos(-2 * math.PI / m * math.float2(j, j + 1))
-                    };
+                      { I = math.int2((k + j) / 2, (k + j + m / 2) / 2),
+                        W = math.cos(-2 * math.PI / m * math.float2(j, j + 1)) };
     }
 
     #endregion
 
     #region First pass job
 
-    [BurstCompile(CompileSynchronously = true)]
+    [Unity.Burst.BurstCompile(CompileSynchronously = true)]
     struct FirstPassJob : IJobParallelFor
     {
         [ReadOnly] public NativeArray<float> I;
@@ -137,7 +163,7 @@ public sealed class BurstFFT : System.IDisposable
 
     #region DFT pass job
 
-    [BurstCompile(CompileSynchronously = true)]
+    [Unity.Burst.BurstCompile(CompileSynchronously = true)]
     struct DftPassJob : IJobParallelFor
     {
         [ReadOnly] public NativeSlice<TFactor> T;
@@ -160,7 +186,7 @@ public sealed class BurstFFT : System.IDisposable
 
     #region Postprocess Job
 
-    [BurstCompile(CompileSynchronously = true)]
+    [Unity.Burst.BurstCompile(CompileSynchronously = true)]
     struct PostprocessJob : IJobParallelFor
     {
         [ReadOnly] public NativeArray<float4> X;

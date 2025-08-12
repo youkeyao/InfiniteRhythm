@@ -181,6 +181,7 @@ public class AudioManager : MonoBehaviour
 
         // generate chart
         ChartGenerator.Generate(samples, sampleRate, m_audioLength, levelManager.NumTracks);
+        SceneChangeGenerator.Generate(samples, sampleRate, m_audioLength);
         m_audioLength += audioClip.length;
         m_audioClips.Enqueue(audioClip);
     }
@@ -192,6 +193,7 @@ public class AudioManager : MonoBehaviour
 
         // generate chart
         ChartGenerator.Generate(samples, audioClip.frequency, m_audioLength, levelManager.NumTracks);
+        SceneChangeGenerator.Generate(samples, sampleRate, m_audioLength);
         m_audioLength += audioClip.length;
         m_audioSource.clip = audioClip;
         m_audioSource.Play();
@@ -206,11 +208,11 @@ public class AudioManager : MonoBehaviour
             // control generation speed
             if (m_audioClips.Count > bufferSize)
             {
-                Pause();
+                PauseGenerate();
             }
             else if (m_audioClips.Count < bufferSize)
             {
-                Play();
+                PlayGenerate();
             }
         }
 
@@ -254,10 +256,10 @@ public class AudioManager : MonoBehaviour
         m_audioClips.Clear();
         m_audioSource.clip = null;
         m_isSetup = false;
-        Stop();
+        StopGenerate();
     }
 
-    async void Play()
+    async void PlayGenerate()
     {
         if (!m_isGenerating && m_webSocket.State == WebSocketState.Open)
         {
@@ -266,7 +268,7 @@ public class AudioManager : MonoBehaviour
         }
     }
 
-    async void Stop()
+    async void StopGenerate()
     {
         if (m_isGenerating && m_webSocket.State == WebSocketState.Open)
         {
@@ -275,7 +277,7 @@ public class AudioManager : MonoBehaviour
         }
     }
 
-    async void Pause()
+    async void PauseGenerate()
     {
         if (m_isGenerating && m_webSocket.State == WebSocketState.Open)
         {

@@ -55,8 +55,6 @@ public class LevelManager : MonoBehaviour
     int m_recordKey = -1;
     float m_startTime = -1;
     int m_sceneIndex = -1;
-    float m_lastScanTime = -100;
-    float m_scanInterval = 30.0f;
     MapManager m_mapManager;
 
     string[][] m_parameterPrompts = {
@@ -131,11 +129,17 @@ public class LevelManager : MonoBehaviour
         }
 
         playUI.transform.GetChild(0).GetComponent<TMP_Text>().text = noteManager.Combo.ToString();
+
+        Queue<float> sceneChangeTimes = SceneChangeGenerator.GetChangeTimes();
+        while (sceneChangeTimes.Count > 0 && sceneChangeTimes.Peek() < Time.time - m_startTime)
+        {
+            sceneChangeTimes.Dequeue();
+            ChangeScene();
+        }
     }
 
     void Init()
     {
-        m_lastScanTime = -100;
         startUI.SetActive(false);
         pauseUI.SetActive(false);
         loadingUI.SetActive(true);
@@ -200,6 +204,7 @@ public class LevelManager : MonoBehaviour
 
         CurveGenerator.Clear();
         ChartGenerator.Clear();
+        SceneChangeGenerator.Clear();
         Destroy(m_mapManager);
         m_mapManager = null;
         noteManager.Clear();
@@ -339,11 +344,6 @@ public class LevelManager : MonoBehaviour
 
     public void ChangeScene()
     {
-        if (m_lastScanTime + m_scanInterval > Time.time)
-        {
-            return;
-        }
-        m_lastScanTime = Time.time;
         int newSceneIndex = Random.Range(0, scenes.Length);
         while (scenes.Length > 1 && newSceneIndex == m_sceneIndex)
         {

@@ -37,10 +37,6 @@ public class AudioAnalysis : MonoBehaviour
             {
                 m_swingTarget = -Mathf.Sign(m_swingTarget) * swingScale * maxSpectrum;
             }
-            if (maxSpectrum > 2 * swingThreshold)
-            {
-                levelManager.ChangeScene();
-            }
             float nowSwingE = m_swingTarget - m_swingValue;
             m_swingValue += (swingPI[0] * (nowSwingE - m_lastSwingE) + swingPI[1] * nowSwingE) * Time.deltaTime;
             if (Mathf.Abs(m_swingValue - m_swingTarget) < swingTransitionThreshold)
